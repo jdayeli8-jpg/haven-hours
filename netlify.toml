@@ -1,0 +1,21 @@
+# Haven & Hours — Netlify configuration
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# API calls go to serverless functions.
+# This redirect MUST come before the SPA catch-all.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback so /dashboard and /admin survive a hard refresh.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
