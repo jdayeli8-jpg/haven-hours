@@ -23,7 +23,7 @@ export default function Footer() {
           Garment Care &amp; Claims Policy
         </button>
         <p className="mt-3 text-[12px] text-stone2/70">
-          © {new Date().getFullYear()} Haven &amp; Hours Laundry · Demo build
+          © {new Date().getFullYear()} Haven &amp; Hours Laundry · Build v38
         </p>
       </div>
       <PolicyModal open={policyOpen} onClose={() => setPolicyOpen(false)} />

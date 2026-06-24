@@ -112,6 +112,7 @@ function AdminPanel({ passcode }) {
       <div className="mt-7 space-y-6">
         <RealOrdersPanel passcode={passcode} />
         <StatusPanel passcode={passcode} />
+        <IncidentPanel passcode={passcode} />
         <div className="card text-center">
           <p className="font-display text-2xl">No demo order loaded.</p>
           <p className="mt-2 text-sm text-stone2">
@@ -181,6 +182,9 @@ function AdminPanel({ passcode }) {
 
       {/* Order status updates + client emails */}
       <StatusPanel passcode={passcode} />
+
+      {/* Damage photos — attach a garment photo + note to a real order */}
+      <IncidentPanel passcode={passcode} />
 
       {/* Today's order */}
       <section className="card">
@@ -707,6 +711,215 @@ function StatusPanel({ passcode }) {
                     ✓ Marked “{f.label}”{' '}
                     <span className="font-normal text-stone2">
                       {f.emailed ? '· email sent' : '· status saved (email not sent)'}
+                    </span>
+                  </p>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/* ---------------- Damage photos (Función B-1) ---------------- */
+
+// Shrinks a phone photo in the browser before upload: resizes the long edge to
+// ~1000px and re-encodes as JPEG, so the stored base64 stays small (~100–300 KB).
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read the photo.'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('That file isn’t a valid image.'))
+      img.onload = () => {
+        const MAX = 1000
+        let { width, height } = img
+        if (width > height && width > MAX) {
+          height = Math.round((height * MAX) / width)
+          width = MAX
+        } else if (height >= width && height > MAX) {
+          width = Math.round((width * MAX) / height)
+          height = MAX
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.7))
+      }
+      img.src = reader.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function IncidentPanel({ passcode }) {
+  const [orders, setOrders] = useState(null)
+  const [error, setError] = useState('')
+  const [photos, setPhotos] = useState({}) // orderId -> compressed dataURL
+  const [notes, setNotes] = useState({}) // orderId -> note text
+  const [busy, setBusy] = useState('') // orderId currently sending
+  const [flash, setFlash] = useState({}) // orderId -> name (just attached)
+
+  const load = async () => {
+    setError('')
+    setOrders(null)
+    try {
+      const res = await fetch('/api/list-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, scope: 'recent' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
+      setOrders(data.orders)
+    } catch (err) {
+      setError(
+        err.message === 'Failed to fetch'
+          ? 'Couldn’t reach the server. Publish the app so /api works.'
+          : err.message
+      )
+      setOrders([])
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const pickPhoto = async (orderId, file) => {
+    if (!file) return
+    setError('')
+    try {
+      const dataUrl = await compressImage(file)
+      setPhotos((p) => ({ ...p, [orderId]: dataUrl }))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const attach = async (order) => {
+    const photo = photos[order.id]
+    if (!photo) return setError('Pick a photo first.')
+    setBusy(order.id)
+    setError('')
+    try {
+      const res = await fetch('/api/report-incident', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          passcode,
+          photo,
+          note: notes[order.id] || '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Upload failed.')
+      setFlash((f) => ({ ...f, [order.id]: data.name || 'customer' }))
+      setOrders((list) =>
+        (list || []).map((o) =>
+          o.id === order.id ? { ...o, incident_created_at: new Date().toISOString() } : o
+        )
+      )
+      // clear the picker for this order
+      setPhotos((p) => ({ ...p, [order.id]: null }))
+      setNotes((n) => ({ ...n, [order.id]: '' }))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  return (
+    <section className="card">
+      <div className="flex items-baseline justify-between">
+        <p className="eyebrow">Damage photos · attach to an order</p>
+        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
+          Refresh
+        </button>
+      </div>
+      <p className="mt-2 text-sm text-ink/70">
+        Found a stain, tear, or pre-existing damage? Snap a photo and add a note.
+        It’s saved to the order. (Next step: the customer reviews it and decides.)
+      </p>
+
+      {error && (
+        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
+          {error}
+        </p>
+      )}
+
+      {orders === null && <p className="mt-4 text-sm text-stone2">Loading orders…</p>}
+      {orders && orders.length === 0 && <p className="mt-4 text-sm text-stone2">No orders yet.</p>}
+
+      {orders && orders.length > 0 && (
+        <ul className="mt-4 space-y-4">
+          {orders.map((o) => {
+            const picked = photos[o.id]
+            const justSaved = flash[o.id]
+            const hasIncident = !!o.incident_created_at
+            const isBusy = busy === o.id
+            return (
+              <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="font-bold">{o.name || 'Customer'}</p>
+                  {hasIncident && !justSaved && (
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-iris">
+                      Photo on file
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[12px] text-stone2">{o.email}</p>
+
+                <div className="mt-3 flex flex-col gap-3">
+                  <label className="btn-ghost cursor-pointer text-center">
+                    {picked ? 'Choose a different photo' : 'Choose / take a photo'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => pickPhoto(o.id, e.target.files && e.target.files[0])}
+                    />
+                  </label>
+
+                  {picked && (
+                    <img
+                      src={picked}
+                      alt="Selected garment"
+                      className="max-h-48 w-auto rounded-xl border border-ink/10 object-contain"
+                    />
+                  )}
+
+                  <textarea
+                    className="field min-h-[64px]"
+                    placeholder="Optional note (e.g. small red stain on the left cuff, looks pre-existing)"
+                    value={notes[o.id] || ''}
+                    onChange={(e) => setNotes((n) => ({ ...n, [o.id]: e.target.value }))}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => attach(o)}
+                    disabled={!picked || isBusy}
+                    className="btn-primary w-full disabled:opacity-50"
+                  >
+                    {isBusy ? 'Saving…' : 'Attach photo to order'}
+                  </button>
+                </div>
+
+                {justSaved && (
+                  <p className="mt-2 text-[12px] font-bold text-iris">
+                    ✓ Photo saved for {justSaved}{' '}
+                    <span className="font-normal text-stone2">
+                      · next step sends it to the customer
                     </span>
                   </p>
                 )}
