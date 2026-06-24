@@ -821,7 +821,7 @@ function IncidentPanel({ passcode }) {
       })
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Upload failed.')
-      setFlash((f) => ({ ...f, [order.id]: data.name || 'customer' }))
+      setFlash((f) => ({ ...f, [order.id]: { name: data.name || 'customer', emailed: data.emailed } }))
       setOrders((list) =>
         (list || []).map((o) =>
           o.id === order.id ? { ...o, incident_created_at: new Date().toISOString() } : o
@@ -847,7 +847,8 @@ function IncidentPanel({ passcode }) {
       </div>
       <p className="mt-2 text-sm text-ink/70">
         Found a stain, tear, or pre-existing damage? Snap a photo and add a note.
-        It’s saved to the order. (Next step: the customer reviews it and decides.)
+        We email the customer the photo with two choices: wash it anyway, or
+        return it untouched — and their answer comes back to you.
       </p>
 
       {error && (
@@ -877,6 +878,13 @@ function IncidentPanel({ passcode }) {
                   )}
                 </div>
                 <p className="mt-0.5 text-[12px] text-stone2">{o.email}</p>
+
+                {o.incident_decision && (
+                  <p className="mt-1 inline-block rounded-full bg-iris-tint px-2.5 py-1 text-[12px] font-bold text-iris-deep">
+                    Customer chose:{' '}
+                    {o.incident_decision === 'approve' ? 'Wash it anyway' : 'Return it untouched'}
+                  </p>
+                )}
 
                 <div className="mt-3 flex flex-col gap-3">
                   <label className="btn-ghost cursor-pointer text-center">
@@ -917,9 +925,9 @@ function IncidentPanel({ passcode }) {
 
                 {justSaved && (
                   <p className="mt-2 text-[12px] font-bold text-iris">
-                    ✓ Photo saved for {justSaved}{' '}
+                    ✓ Photo sent to {justSaved.name}{' '}
                     <span className="font-normal text-stone2">
-                      · next step sends it to the customer
+                      {justSaved.emailed ? '· email sent for review' : '· saved (email not sent)'}
                     </span>
                   </p>
                 )}
