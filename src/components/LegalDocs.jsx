@@ -31,6 +31,10 @@ const TERMS = [
     b: 'You are responsible for providing an accurate address and ensuring your laundry is accessible at the scheduled time. Missed pickups or deliveries that require a return trip may incur an additional fee.',
   },
   {
+    h: 'Cancellations & minimums',
+    b: 'A $35 minimum applies to every completed wash & fold order. If you decline service after we have already collected your laundry, we’ll waive any fee the first time as a courtesy; repeat cancellations after pickup incur a $20 return-trip fee, charged to the card on file. You’ll always see your exact total before any charge is made.',
+  },
+  {
     h: 'Garment care',
     b: 'We follow the manufacturer’s care label on each garment. We are not liable for normal wear, color bleeding, or shrinkage inherent to the cleaning process, or for damage that occurs while following a garment’s stated care instructions.',
   },

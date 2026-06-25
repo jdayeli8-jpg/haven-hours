@@ -13,7 +13,7 @@ export default function Dashboard() {
     <div className="mx-auto max-w-xl px-5 py-10">
       <p className="eyebrow">Customer</p>
       <h1 className="mt-2 font-display text-4xl">
-        {order ? 'Your order' : 'Schedule a pickup'}
+        {!order ? 'Schedule a pickup' : order.authorization ? 'Your order' : 'Confirm your pickup'}
       </h1>
       {order ? <OrderView /> : <PickupForm />}
     </div>
@@ -368,22 +368,40 @@ function OrderView() {
 
   return (
     <div className="mt-7 space-y-6">
-      {/* Status */}
-      <section className="card">
-        <div className="flex items-baseline justify-between">
-          <p className="eyebrow">Order {order.id}</p>
-          <p className="text-[12px] text-stone2">
-            {order.pickup.date} · {order.pickup.window}
+      {/* Before the card is saved: make it clear the pickup isn't confirmed yet */}
+      {!order.authorization && !payment && (
+        <section className="card border-iris/30 bg-iris-tint/30">
+          <p className="eyebrow text-iris">Almost done</p>
+          <h2 className="mt-2 font-display text-2xl">Confirm your pickup</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink/80">
+            Save your card below to lock in your pickup for{' '}
+            <span className="font-bold">
+              {order.pickup.date} · {order.pickup.window}
+            </span>
+            . <span className="font-bold text-ink">You’re only charged after we weigh your laundry</span>{' '}
+            — you’ll see the exact total first. A $35 minimum applies.
           </p>
-        </div>
-        <div className="mt-5">
-          <ClotheslineTracker statusIndex={order.statusIndex} />
-        </div>
-        <p className="mt-4 text-center text-sm">
-          <span className="font-bold text-iris">{STATUS_STEPS[order.statusIndex]}</span>
-          {order.statusIndex === STATUS_STEPS.length - 1 && ' — almost home.'}
-        </p>
-      </section>
+        </section>
+      )}
+
+      {/* Status — only once the pickup is actually confirmed (card on file) */}
+      {order.authorization && (
+        <section className="card">
+          <div className="flex items-baseline justify-between">
+            <p className="eyebrow">Order {order.id}</p>
+            <p className="text-[12px] text-stone2">
+              {order.pickup.date} · {order.pickup.window}
+            </p>
+          </div>
+          <div className="mt-5">
+            <ClotheslineTracker statusIndex={order.statusIndex} />
+          </div>
+          <p className="mt-4 text-center text-sm">
+            <span className="font-bold text-iris">{STATUS_STEPS[order.statusIndex]}</span>
+            {order.statusIndex === STATUS_STEPS.length - 1 && ' — almost home.'}
+          </p>
+        </section>
+      )}
 
       {/* Customer checkout — shows until the card is authorized */}
       {!order.authorization && !payment && <Checkout estPounds={14} />}

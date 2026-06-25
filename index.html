@@ -1,77 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
-
-/* ============================================================
-   HAVEN & HOURS — Conexión con tu base de datos (Supabase)
-
-   👉 SOLO TIENES QUE LLENAR LAS DOS LÍNEAS DE ABAJO.
-   Los valores están en Supabase → Settings → API Keys.
-
-   ⚠️  NUNCA pongas aquí la llave "service_role" / "secret".
-       Esa es la llave maestra y jamás va en la app.
-   ============================================================ */
-
-// 1) Tu Project URL  (algo como: https://xxxxxxxx.supabase.co)
-const SUPABASE_URL = 'https://kjzvdbawpqioluirxkir.supabase.co'
-
-// 2) Tu llave PÚBLICA  (la "anon public" — empieza con eyJ...
-//    o la nueva "Publishable key" — empieza con sb_publishable_...)
-const SUPABASE_KEY = 'sb_publishable_DUlDffVCIEIMjqMefYW-7Q_in0R4n5j'
-
-/* ------------------------------------------------------------
-   No necesitas tocar NADA debajo de esta línea.
-   ------------------------------------------------------------ */
-
-const isConfigured =
-  SUPABASE_URL.startsWith('http') && !SUPABASE_KEY.startsWith('PEGA_')
-
-export const supabase = isConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null
-
-if (!supabase && typeof window !== 'undefined') {
-  console.warn(
-    '[Haven & Hours] Supabase aún no está configurado. ' +
-      'La app funciona en modo demo y los correos NO se están guardando todavía. ' +
-      'Llena SUPABASE_URL y SUPABASE_KEY en src/lib/supabase.js.'
-  )
-}
-
-/**
- * Guarda un lead (correo capturado) en la tabla `leads` de Supabase.
- * Es "a prueba de fallos": si Supabase no está configurado o falla la red,
- * NO rompe la experiencia del cliente — solo deja una nota en la consola.
- */
-export async function saveLead({
-  email,
-  name = null,
-  phone = null,
-  zip = null,
-  source = 'welcome_coupon',
-  referralCode = null,
-  notes = null,
-}) {
-  if (!supabase) return { ok: false, skipped: true }
-
-  const clean = String(email || '').trim().toLowerCase()
-  if (!clean) return { ok: false, error: 'empty email' }
-
-  try {
-    const { error } = await supabase.from('leads').insert({
-      email: clean,
-      name,
-      phone,
-      zip,
-      source,
-      referral_code: referralCode,
-      notes,
-    })
-    if (error) {
-      console.warn('[Haven & Hours] No se pudo guardar el lead:', error.message)
-      return { ok: false, error }
-    }
-    return { ok: true }
-  } catch (e) {
-    console.warn('[Haven & Hours] Error de red al guardar el lead:', e)
-    return { ok: false, error: e }
-  }
-}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Haven &amp; Hours Laundry — Premium pickup &amp; delivery in Riverside, CA</title>
+    <meta name="description" content="Premium wash & fold, ironing and bedding care, picked up at your door in Riverside, CA (92507, 92506 and nearby). Your home, a haven. Your day, restored." />
+    <meta name="theme-color" content="#F7F4ED" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Karla:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Square Web Payments SDK — MODO PRUEBA (Sandbox).
+         ⚠️ Esta línea debe COINCIDIR con SQUARE_ENV en src/lib/square.js.
+         Para dinero REAL (production), cambia el src de:
+           https://sandbox.web.squarecdn.com/v1/square.js   (sandbox)
+         a:
+           https://web.squarecdn.com/v1/square.js           (production) -->
+    <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+  </head>
+  <body class="bg-ivory">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
