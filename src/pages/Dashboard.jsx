@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore, STATUS_STEPS } from '../context/StoreContext.jsx'
 import ClotheslineTracker from '../components/ClotheslineTracker.jsx'
 import Checkout from '../components/Checkout.jsx'
@@ -365,6 +365,12 @@ function PickupForm() {
 function OrderView() {
   const { order, resolveIncident, resetOrder } = useStore()
   const { incident, payment } = order
+
+  // When the order view first appears (right after scheduling), jump to the top
+  // so the customer lands on "Confirm your pickup", not halfway down the page.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [])
 
   return (
     <div className="mt-7 space-y-6">
