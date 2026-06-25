@@ -6,6 +6,15 @@ import {
 } from '../context/StoreContext.jsx'
 import ClotheslineTracker from '../components/ClotheslineTracker.jsx'
 
+// Tus precios de tintorería (App Price). Para cambiarlos, solo edita el número.
+const DRY_CLEAN = [
+  { key: 'suit', label: '2-Piece Suit', price: 18.25 },
+  { key: 'shirt', label: 'Dress Shirt', price: 3.5 },
+  { key: 'pants', label: 'Pants / Jeans', price: 8.25 },
+  { key: 'dress', label: 'Formal Dress', price: 16.5 },
+  { key: 'comforter', label: 'Comforter (Q/K)', price: 40.5 },
+]
+
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false)
   const [passcode, setPasscode] = useState('')
@@ -275,7 +284,7 @@ function AdminPanel({ passcode }) {
         </p>
         {services.dryCleaning && (
           <p className="mt-1 text-[12px] font-bold text-iris">
-            Dry cleaning run requested — bill separately at the cleaner’s rates.
+            Dry cleaning run requested — add the items below; included in the one charge.
           </p>
         )}
       </section>
@@ -356,6 +365,27 @@ function RealOrdersPanel({ passcode }) {
   const [weights, setWeights] = useState({}) // { [orderId]: '12.5' }
   const [extras, setExtras] = useState({}) // { [orderId]: '45.00' } — dry cleaning, etc.
   const [extraNotes, setExtraNotes] = useState({}) // { [orderId]: '3 shirts dry clean' }
+  const [dryItems, setDryItems] = useState({}) // { [orderId]: { suit: 2, shirt: 1 } }
+
+  // Suma/resta una prenda de tintorería y recalcula el extra + la nota automáticamente.
+  const setDryQty = (orderId, key, delta) => {
+    const cur = { ...(dryItems[orderId] || {}) }
+    const next = Math.max(0, (cur[key] || 0) + delta)
+    if (next === 0) delete cur[key]
+    else cur[key] = next
+    let subtotal = 0
+    const parts = []
+    for (const item of DRY_CLEAN) {
+      const q = cur[item.key] || 0
+      if (q > 0) {
+        subtotal += q * item.price
+        parts.push(`${q} ${item.label}`)
+      }
+    }
+    setDryItems((m) => ({ ...m, [orderId]: cur }))
+    setExtras((m) => ({ ...m, [orderId]: subtotal > 0 ? subtotal.toFixed(2) : '' }))
+    setExtraNotes((m) => ({ ...m, [orderId]: parts.join(', ') }))
+  }
   const [busyId, setBusyId] = useState(null)
   const [done, setDone] = useState({}) // { [orderId]: { washFold, extra, total, paymentId } }
 
@@ -501,10 +531,50 @@ function RealOrdersPanel({ passcode }) {
                       />
                     </div>
 
+                    <div>
+                      <label className="label">Dry cleaning — tap to add</label>
+                      <div className="mt-1 space-y-1.5 rounded-xl border border-ink/10 p-3">
+                        {DRY_CLEAN.map((item) => {
+                          const q = (dryItems[o.id] || {})[item.key] || 0
+                          return (
+                            <div key={item.key} className="flex items-center justify-between gap-2">
+                              <span className="text-[13px]">
+                                {item.label}{' '}
+                                <span className="text-stone2">${item.price.toFixed(2)}</span>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  aria-label={`Remove one ${item.label}`}
+                                  className="h-7 w-7 rounded-full border border-ink/15 font-bold leading-none disabled:opacity-30"
+                                  disabled={q === 0}
+                                  onClick={() => setDryQty(o.id, item.key, -1)}
+                                >
+                                  –
+                                </button>
+                                <span className="w-5 text-center text-sm font-bold">{q}</span>
+                                <button
+                                  type="button"
+                                  aria-label={`Add one ${item.label}`}
+                                  className="h-7 w-7 rounded-full border border-ink/15 font-bold leading-none"
+                                  onClick={() => setDryQty(o.id, item.key, +1)}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-1 text-[12px] text-stone2">
+                        Adds to the single total below — one charge, itemized.
+                      </p>
+                    </div>
+
                     <div className="flex gap-2">
                       <div className="w-36">
                         <label className="label" htmlFor={`x-${o.id}`}>
-                          Extra $ (dry clean…)
+                          Dry-clean $ (auto)
                         </label>
                         <input
                           id={`x-${o.id}`}

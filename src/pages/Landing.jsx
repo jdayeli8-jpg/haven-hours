@@ -35,7 +35,7 @@ const FAQS = [
   },
   {
     q: 'How does the dry cleaning run work?',
-    a: 'Mark dry-clean garments at pickup. We deliver them to our trusted partner cleaner, collect them when ready, and return them with your order. The cleaning is billed separately at the cleaner’s rates.',
+    a: 'Mark dry-clean garments at pickup. We deliver them to our trusted partner cleaner, collect them when ready, and return them with your order. Each piece is itemized and added to your one order total — a single charge, with everything broken out on your receipt.',
   },
   {
     q: 'Do I need to sort or count anything?',
@@ -64,9 +64,9 @@ const RATES = [
   },
   {
     name: 'Dry Cleaning Run',
-    price: 'cleaner’s rates',
-    unit: '',
-    note: 'We pick up, deliver to our partner cleaner, and return it',
+    price: 'from $3.50',
+    unit: '/ item',
+    note: 'Suits, shirts, dresses & comforters — itemized and added to your one order total',
   },
 ]
 
