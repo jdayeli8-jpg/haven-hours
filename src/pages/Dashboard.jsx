@@ -5,7 +5,7 @@ import Checkout from '../components/Checkout.jsx'
 import ReferAFriend from '../components/ReferAFriend.jsx'
 import ZipGate from '../components/ZipGate.jsx'
 
-const WINDOWS = ['8–10 AM', '10–12 PM', '12–2 PM', '2–4 PM', '4–6 PM']
+const WINDOWS = ['Morning · 8 AM – 12 PM', 'Afternoon · 2 PM – 6 PM']
 
 export default function Dashboard() {
   const { order } = useStore()
@@ -126,6 +126,9 @@ function PickupForm() {
               <option key={w}>{w}</option>
             ))}
           </select>
+          <p className="mt-1 text-[12px] text-stone2">
+            We’ll text you a closer arrival time the morning of your pickup.
+          </p>
         </div>
       </div>
 

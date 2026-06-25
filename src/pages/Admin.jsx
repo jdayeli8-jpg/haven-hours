@@ -111,6 +111,7 @@ function AdminPanel({ passcode }) {
     return (
       <div className="mt-7 space-y-6">
         <RealOrdersPanel passcode={passcode} />
+        <RoutePanel passcode={passcode} />
         <StatusPanel passcode={passcode} />
         <IncidentPanel passcode={passcode} />
         <div className="card text-center">
@@ -179,6 +180,9 @@ function AdminPanel({ passcode }) {
     <div className="mt-7 space-y-6">
       {/* Real orders from the database — weigh & charge the saved card */}
       <RealOrdersPanel passcode={passcode} />
+
+      {/* Today's pickups & route — batching helper */}
+      <RoutePanel passcode={passcode} />
 
       {/* Order status updates + client emails */}
       <StatusPanel passcode={passcode} />
@@ -935,6 +939,123 @@ function IncidentPanel({ passcode }) {
             )
           })}
         </ul>
+      )}
+    </section>
+  )
+}
+
+/* ---------------- Today's pickups & route (batching helper) ---------------- */
+
+function RoutePanel({ passcode }) {
+  const [orders, setOrders] = useState(null)
+  const [error, setError] = useState('')
+  const today = new Date().toISOString().slice(0, 10)
+
+  const load = async () => {
+    setError('')
+    setOrders(null)
+    try {
+      const res = await fetch('/api/list-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, scope: 'recent' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
+      setOrders(data.orders)
+    } catch (err) {
+      setError(
+        err.message === 'Failed to fetch'
+          ? 'Couldn’t reach the server. Publish the app so /api works.'
+          : err.message
+      )
+      setOrders([])
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const withPickup = (orders || []).filter((o) => o.pickup_date)
+  const todays = withPickup.filter((o) => o.pickup_date === today)
+  const upcoming = withPickup.filter((o) => o.pickup_date !== today)
+
+  const textLink = (o) => {
+    const digits = String(o.phone || '').replace(/[^\d]/g, '')
+    const win = o.pickup_window || 'your window'
+    const msg = `Hi ${o.name || 'there'}, this is Haven & Hours. Your laundry pickup is today (${win}). We'll arrive around ~____. See you soon!`
+    return `sms:${digits}?body=${encodeURIComponent(msg)}`
+  }
+
+  const Card = ({ o, isToday }) => (
+    <li className="rounded-2xl border border-ink/10 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-bold">{o.name || 'Customer'}</p>
+        <span className="text-[12px] text-stone2">{o.pickup_window}</span>
+      </div>
+      {o.address && <p className="mt-1 text-[13px] text-ink/75">{o.address}</p>}
+      <p className="mt-0.5 text-[12px] text-stone2">
+        {o.pickup_date}
+        {o.phone ? ` · ${o.phone}` : ''}
+      </p>
+      {o.phone && isToday && (
+        <a href={textLink(o)} className="btn-ghost mt-3 inline-block text-center">
+          📲 Text arrival time
+        </a>
+      )}
+    </li>
+  )
+
+  return (
+    <section className="card">
+      <div className="flex items-baseline justify-between">
+        <p className="eyebrow">Today’s pickups &amp; route</p>
+        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
+          Refresh
+        </button>
+      </div>
+      <p className="mt-2 text-sm text-ink/70">
+        Group these into one efficient loop. Tap “Text arrival time” to send each
+        customer a closer ETA from your phone.
+      </p>
+
+      {error && (
+        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
+          {error}
+        </p>
+      )}
+
+      {orders === null && <p className="mt-4 text-sm text-stone2">Loading…</p>}
+      {orders && withPickup.length === 0 && (
+        <p className="mt-4 text-sm text-stone2">No scheduled pickups yet.</p>
+      )}
+
+      {todays.length > 0 && (
+        <>
+          <p className="mt-5 text-[12px] font-bold uppercase tracking-wide text-iris">
+            Today ({todays.length})
+          </p>
+          <ul className="mt-2 space-y-3">
+            {todays.map((o) => (
+              <Card key={o.id} o={o} isToday />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {upcoming.length > 0 && (
+        <>
+          <p className="mt-5 text-[12px] font-bold uppercase tracking-wide text-stone2">
+            Upcoming
+          </p>
+          <ul className="mt-2 space-y-3">
+            {upcoming.map((o) => (
+              <Card key={o.id} o={o} isToday={false} />
+            ))}
+          </ul>
+        </>
       )}
     </section>
   )

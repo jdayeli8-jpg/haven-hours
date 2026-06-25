@@ -4,7 +4,7 @@ import { PRICING } from '../context/StoreContext.jsx'
 const STEPS = [
   {
     title: 'Book online',
-    body: 'Pick a day and a two-hour window that suits you. Leave the bag at your door — that’s it.',
+    body: 'Pick a day and a time block — morning or afternoon. Leave the bag at your door — that’s it. We’ll text a closer arrival time the morning of.',
   },
   {
     title: 'We collect',
@@ -12,7 +12,7 @@ const STEPS = [
   },
   {
     title: 'Delivered fresh',
-    body: 'Washed, pressed and folded to boutique standard, back at your door — usually within 24 hours.',
+    body: 'Washed, pressed and folded to boutique standard, back at your door the next day.',
   },
 ]
 
