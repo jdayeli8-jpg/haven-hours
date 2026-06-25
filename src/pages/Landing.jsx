@@ -189,7 +189,8 @@ export default function Landing() {
               <p className="mt-2 text-sm leading-relaxed text-ink/70">
                 Have garments that need a professional cleaner? Mark them at pickup and we’ll
                 ferry them to our trusted partner cleaner and bring them back with your
-                order. The cleaning itself is billed separately at the cleaner’s rates.
+                order. Each piece is itemized and added to your one order total — a single
+                charge, with everything broken out on your receipt.
               </p>
             </div>
           </div>

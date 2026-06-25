@@ -232,8 +232,8 @@ function PickupForm() {
           <span className="text-sm">
             <span className="font-bold">Dry cleaning run</span>
             <span className="block text-stone2">
-              We’ll take marked garments to our partner cleaner and bring them back. Priced
-              separately at the cleaner’s rates.
+              We’ll take marked garments to our partner cleaner and bring them back. Each
+              piece is itemized and added to your one order total.
             </span>
           </span>
         </label>
@@ -496,7 +496,7 @@ function OrderView() {
             <Row k="Twin bedding" v={`${order.services.beddingTwin} · $18 ea`} />
           )}
           {order.services?.dryCleaning && (
-            <Row k="Dry cleaning run" v="Yes · billed separately" />
+            <Row k="Dry cleaning run" v="Yes · itemized on your total" />
           )}
           {order.preferences && (
             <>
