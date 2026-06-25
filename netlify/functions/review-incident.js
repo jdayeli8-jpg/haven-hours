@@ -95,28 +95,13 @@ export async function handler(event) {
       ${noteHtml}
       <h1>${heading}</h1>
       ${detail}
-      <button class="btn primary" id="confirmBtn">Confirm this choice</button>
-      <div id="result"></div>
+      <form method="POST" action="/api/resolve-incident">
+        <input type="hidden" name="order" value="${order.id}"/>
+        <input type="hidden" name="token" value="${esc(token)}"/>
+        <input type="hidden" name="decision" value="${choice}"/>
+        <button class="btn primary" type="submit">Confirm this choice</button>
+      </form>
       <a class="swap" href="?order=${order.id}&token=${encodeURIComponent(token)}&choice=${other}">← I’d rather ${otherLabel}</a>
-      <script>
-        var b=document.getElementById('confirmBtn');
-        b.addEventListener('click', function(){
-          b.disabled=true; b.textContent='Saving…';
-          fetch('/api/resolve-incident',{method:'POST',headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({order:${order.id}, token:${JSON.stringify(token)}, decision:${JSON.stringify(choice)}})})
-          .then(function(r){return r.json()})
-          .then(function(d){
-            if(d && d.ok){ document.querySelector('.card').innerHTML =
-              '<p class="ok">✓ Thank you — your choice is recorded.</p>'+
-              '<p>${choice === 'approve' ? 'We’ll clean it with extra care.' : 'We’ll return it to you unwashed, with no charge for this item.'}</p>'+
-              '<p class="fine">Questions? Just reply to our email.</p>'; }
-            else { b.disabled=false; b.textContent='Confirm this choice';
-              document.getElementById('result').innerHTML='<p class="fine">Something went wrong. Please try again or reply to our email.</p>'; }
-          })
-          .catch(function(){ b.disabled=false; b.textContent='Confirm this choice';
-            document.getElementById('result').innerHTML='<p class="fine">Couldn’t reach the server. Please try again.</p>'; });
-        });
-      </script>
     `), htmlHeaders)
   }
 

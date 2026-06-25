@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useStore, quoteTotal, PROMO, bestDiscount } from '../context/StoreContext.jsx'
 import { SQUARE_APP_ID, SQUARE_LOCATION_ID } from '../lib/square.js'
 import PolicyModal from './PolicyModal.jsx'
+import { TermsModal, PrivacyModal } from './LegalDocs.jsx'
 
 /**
  * Customer-facing checkout, demo mode — Poplin-style.
@@ -21,6 +22,8 @@ export default function Checkout({ estPounds = 14 }) {
   const [saveCard, setSaveCard] = useState(true)
   const [policyAgreed, setPolicyAgreed] = useState(false)
   const [policyOpen, setPolicyOpen] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
   const [error, setError] = useState('')
   const [paying, setPaying] = useState(false)
   const [cardReady, setCardReady] = useState(false)
@@ -114,7 +117,7 @@ export default function Checkout({ estPounds = 14 }) {
   const payWithCard = async () => {
     setError('')
     if (!policyAgreed) {
-      return setError('Please read and agree to the Garment Care & Claims Policy to continue.')
+      return setError('Please agree to the Policy, Terms of Service, and Privacy Policy to continue.')
     }
     if (!contact.name.trim()) return setError('Please enter your name.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) {
@@ -174,7 +177,7 @@ export default function Checkout({ estPounds = 14 }) {
   const authorize = (chosen) => {
     setError('')
     if (!policyAgreed) {
-      return setError('Please read and agree to the Garment Care & Claims Policy to continue.')
+      return setError('Please agree to the Policy, Terms of Service, and Privacy Policy to continue.')
     }
     setMethod(chosen)
     recordAuthorization({
@@ -236,6 +239,22 @@ export default function Checkout({ estPounds = 14 }) {
             className="font-bold text-iris underline underline-offset-2 hover:text-iris-deep"
           >
             Garment Care &amp; Claims Policy
+          </button>
+          ,{' '}
+          <button
+            type="button"
+            onClick={() => setTermsOpen(true)}
+            className="font-bold text-iris underline underline-offset-2 hover:text-iris-deep"
+          >
+            Terms of Service
+          </button>
+          , and{' '}
+          <button
+            type="button"
+            onClick={() => setPrivacyOpen(true)}
+            className="font-bold text-iris underline underline-offset-2 hover:text-iris-deep"
+          >
+            Privacy Policy
           </button>
           .
         </span>
@@ -338,6 +357,8 @@ export default function Checkout({ estPounds = 14 }) {
       </p>
 
       <PolicyModal open={policyOpen} onClose={() => setPolicyOpen(false)} />
+      <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
+      <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </section>
   )
 }
