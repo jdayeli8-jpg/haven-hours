@@ -21,9 +21,9 @@ import { createClient } from '@supabase/supabase-js'
 // Sandbox por defecto. Para PRODUCCIÓN, en Netlify pon:
 //   SQUARE_API_BASE    = https://connect.squareup.com/v2
 //   SQUARE_LOCATION_ID = (tu Location ID real de Producción)
-const SQUARE_API = process.env.SQUARE_API_BASE || 'https://connect.squareupsandbox.com/v2'
+const SQUARE_API = process.env.SQUARE_API_BASE || 'https://connect.squareup.com/v2'
 const SUPABASE_URL = 'https://kjzvdbawpqioluirxkir.supabase.co'
-const SQUARE_LOCATION_ID = process.env.SQUARE_LOCATION_ID || 'L3X56QS01NHW6'
+const SQUARE_LOCATION_ID = process.env.SQUARE_LOCATION_ID || 'LSGM5HV2V8KRA'
 
 const PER_LB = 2.25
 const MINIMUM = 35

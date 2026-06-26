@@ -14,8 +14,8 @@
 
 import { randomUUID } from 'node:crypto'
 
-const SQUARE_API = (process.env.SQUARE_API_BASE || 'https://connect.squareupsandbox.com/v2') + '/payments'
-const LOCATION_ID = process.env.SQUARE_LOCATION_ID || 'L3X56QS01NHW6'
+const SQUARE_API = (process.env.SQUARE_API_BASE || 'https://connect.squareup.com/v2') + '/payments'
+const LOCATION_ID = process.env.SQUARE_LOCATION_ID || 'LSGM5HV2V8KRA'
 
 const PRICING = {
   WASH_FOLD_PER_LB: 2.25,

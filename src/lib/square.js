@@ -17,7 +17,7 @@
 */
 
 // 👇 EL ÚNICO INTERRUPTOR: 'sandbox' (prueba) o 'production' (dinero real)
-const SQUARE_ENV = 'sandbox'
+const SQUARE_ENV = 'production'
 
 const SQUARE_CONFIG = {
   sandbox: {
@@ -26,9 +26,8 @@ const SQUARE_CONFIG = {
     sdkUrl: 'https://sandbox.web.squarecdn.com/v1/square.js',
   },
   production: {
-    // ⬇️ PEGA AQUÍ tus datos de Producción cuando los tengas (Square Dashboard → Developer)
-    appId: 'PON-AQUI-TU-PRODUCTION-APP-ID',
-    locationId: 'PON-AQUI-TU-PRODUCTION-LOCATION-ID',
+    appId: 'sq0idp-yPwP5UznUeRmP0sqVN_Dqg',
+    locationId: 'LSGM5HV2V8KRA',
     sdkUrl: 'https://web.squarecdn.com/v1/square.js',
   },
 }

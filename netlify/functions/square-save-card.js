@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js'
 
 // Sandbox por defecto. Para PRODUCCIÓN solo pon en Netlify la variable
 // SQUARE_API_BASE = https://connect.squareup.com/v2 (no hace falta tocar el código).
-const SQUARE_API = process.env.SQUARE_API_BASE || 'https://connect.squareupsandbox.com/v2'
+const SQUARE_API = process.env.SQUARE_API_BASE || 'https://connect.squareup.com/v2'
 const SUPABASE_URL = 'https://kjzvdbawpqioluirxkir.supabase.co'
 
 const PRICING = {
