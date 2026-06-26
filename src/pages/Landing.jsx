@@ -12,7 +12,7 @@ const STEPS = [
   },
   {
     title: 'Delivered fresh',
-    body: 'Washed, pressed and folded to boutique standard, back at your door the next day.',
+    body: 'Washed, pressed and folded to boutique standard, back at your door the next day (we rest on Sundays).',
   },
 ]
 

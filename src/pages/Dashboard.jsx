@@ -7,6 +7,27 @@ import ZipGate from '../components/ZipGate.jsx'
 
 const WINDOWS = ['Morning · 8 AM – 12 PM', 'Afternoon · 2 PM – 6 PM']
 
+// Reglas de horario: domingo cerrado; sábado solo "Mañana".
+// getDay(): 0=domingo, 6=sábado. Parseamos Y-M-D local para evitar saltos de zona horaria.
+function weekdayOf(dateStr) {
+  if (!dateStr) return null
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).getDay()
+}
+function ymd(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+// Devuelve el primer día NO-domingo a partir de la fecha dada.
+function nextOpenDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  while (dt.getDay() === 0) dt.setDate(dt.getDate() + 1)
+  return ymd(dt)
+}
+function windowsForDate(dateStr) {
+  return weekdayOf(dateStr) === 6 ? [WINDOWS[0]] : WINDOWS // sábado: solo Mañana
+}
+
 export default function Dashboard() {
   const { order } = useStore()
   return (
@@ -23,10 +44,11 @@ export default function Dashboard() {
 /* ---------------- Pickup form ---------------- */
 function PickupForm() {
   const { placeOrder, promoUnlocked, couponCode } = useStore()
-  const today = new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const today = ymd(now)
   const [verifiedZip, setVerifiedZip] = useState(null)
   const [form, setForm] = useState({
-    date: today,
+    date: nextOpenDate(today),
     window: WINDOWS[0],
     address: '',
     notes: '',
@@ -49,8 +71,22 @@ function PickupForm() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
+  // Al cambiar la fecha: si es domingo avisa; si es sábado fuerza "Mañana".
+  const onDateChange = (e) => {
+    const date = e.target.value
+    const wd = weekdayOf(date)
+    setForm((f) => ({ ...f, date, window: wd === 6 ? WINDOWS[0] : f.window }))
+    setError(wd === 0 ? 'We’re closed on Sundays — please choose another day.' : '')
+  }
+
+  const availableWindows = windowsForDate(form.date)
+
   const submit = () => {
     if (!form.date) return setError('Choose a pickup date.')
+    const wd = weekdayOf(form.date)
+    if (wd === 0) return setError('We’re closed on Sundays — please choose another day.')
+    // En sábado solo hay "Mañana"; corregimos por si acaso.
+    const window = wd === 6 ? WINDOWS[0] : form.window
     if (!form.address.trim()) return setError('Add the address where we should collect.')
     const ironingPieces = services.ironing ? parseInt(services.ironingPieces, 10) || 0 : 0
     if (services.ironing && ironingPieces <= 0)
@@ -59,7 +95,7 @@ function PickupForm() {
       return setError('Please confirm you understand the chlorine bleach note, or turn it off.')
     setError('')
     placeOrder(
-      { ...form, address: form.address.trim(), notes: form.notes.trim() },
+      { ...form, window, address: form.address.trim(), notes: form.notes.trim() },
       {
         ironingPieces,
         beddingKing: services.beddingKing,
@@ -115,14 +151,17 @@ function PickupForm() {
           <label htmlFor="date" className="label">
             Pickup date
           </label>
-          <input id="date" type="date" min={today} className="field" value={form.date} onChange={set('date')} />
+          <input id="date" type="date" min={today} className="field" value={form.date} onChange={onDateChange} />
+          <p className="mt-1 text-[12px] text-stone2">
+            Closed Sundays · Saturdays mornings only.
+          </p>
         </div>
         <div>
           <label htmlFor="window" className="label">
             Time window
           </label>
           <select id="window" className="field" value={form.window} onChange={set('window')}>
-            {WINDOWS.map((w) => (
+            {availableWindows.map((w) => (
               <option key={w}>{w}</option>
             ))}
           </select>
