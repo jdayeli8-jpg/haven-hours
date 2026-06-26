@@ -119,9 +119,8 @@ function AdminPanel({ passcode }) {
   if (!order) {
     return (
       <div className="mt-7 space-y-6">
+        <OrdersBoard passcode={passcode} />
         <RealOrdersPanel passcode={passcode} />
-        <RoutePanel passcode={passcode} />
-        <StatusPanel passcode={passcode} />
         <IncidentPanel passcode={passcode} />
         <div className="card text-center">
           <p className="font-display text-2xl">No demo order loaded.</p>
@@ -187,14 +186,11 @@ function AdminPanel({ passcode }) {
 
   return (
     <div className="mt-7 space-y-6">
+      {/* Command center — every order as a card, by stage */}
+      <OrdersBoard passcode={passcode} />
+
       {/* Real orders from the database — weigh & charge the saved card */}
       <RealOrdersPanel passcode={passcode} />
-
-      {/* Today's pickups & route — batching helper */}
-      <RoutePanel passcode={passcode} />
-
-      {/* Order status updates + client emails */}
-      <StatusPanel passcode={passcode} />
 
       {/* Damage photos — attach a garment photo + note to a real order */}
       <IncidentPanel passcode={passcode} />
@@ -359,6 +355,226 @@ function AdminPanel({ passcode }) {
 }
 
 /* ---------------- Live orders (Supabase) — weigh & charge ---------------- */
+// ── Fase 2a: Tablero de mando ──────────────────────────────────────────
+// Todas las órdenes como tarjetas, agrupadas por etapa, con su número.
+// Reusa /api/update-status (que también avisa al cliente por correo).
+// 'delivered' = Archivo (órdenes completadas).
+const BOARD_COLUMNS = [
+  { key: 'new', label: 'New orders' },
+  { key: 'collected', label: 'Collected' },
+  { key: 'washing', label: 'In the wash' },
+  { key: 'ready', label: 'Ready' },
+]
+
+function stageOf(o) {
+  const f = o.fulfillment_status
+  return f === 'collected' || f === 'washing' || f === 'ready' || f === 'delivered' ? f : 'new'
+}
+
+function OrdersBoard({ passcode }) {
+  const [orders, setOrders] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(null) // `${id}:${stage}`
+  const [archiveOpen, setArchiveOpen] = useState(false)
+
+  const load = async () => {
+    setError('')
+    setOrders(null)
+    try {
+      const res = await fetch('/api/list-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, scope: 'recent' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
+      setOrders(data.orders || [])
+    } catch (err) {
+      setError(
+        err.message === 'Failed to fetch'
+          ? 'Couldn’t reach the server. Publish the app so /api works.'
+          : err.message
+      )
+      setOrders([])
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const setStage = async (order, stageKey) => {
+    setBusy(`${order.id}:${stageKey}`)
+    setError('')
+    try {
+      const res = await fetch('/api/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id, status: stageKey, passcode }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not update.')
+      setOrders((list) =>
+        (list || []).map((o) => (o.id === order.id ? { ...o, fulfillment_status: stageKey } : o))
+      )
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const list = orders || []
+  const active = list.filter((o) => stageOf(o) !== 'delivered')
+  const archived = list.filter((o) => stageOf(o) === 'delivered')
+
+  return (
+    <section className="card">
+      <div className="flex items-baseline justify-between">
+        <p className="eyebrow">Order board · everything in one place</p>
+        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
+          Refresh
+        </button>
+      </div>
+      <p className="mt-2 text-sm text-ink/70">
+        Each order is one card with its number. Move it along as it progresses — the
+        customer gets an email at each step. Tap <span className="font-bold">Delivered</span>{' '}
+        to send it to the archive.
+      </p>
+
+      {error && (
+        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
+          {error}
+        </p>
+      )}
+
+      {orders === null && <p className="mt-4 text-sm text-stone2">Loading orders…</p>}
+      {orders !== null && active.length === 0 && (
+        <p className="mt-4 text-sm text-stone2">No active orders right now.</p>
+      )}
+
+      {BOARD_COLUMNS.map((col) => {
+        const inCol = active.filter((o) => stageOf(o) === col.key)
+        if (inCol.length === 0) return null
+        return (
+          <div key={col.key} className="mt-5">
+            <p className="text-[12px] font-bold uppercase tracking-wide text-stone2">
+              {col.label} · {inCol.length}
+            </p>
+            <ul className="mt-2 space-y-3">
+              {inCol.map((o) => (
+                <BoardCard key={o.id} o={o} busy={busy} onStage={setStage} />
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+
+      {archived.length > 0 && (
+        <div className="mt-6 border-t border-ink/10 pt-4">
+          <button
+            type="button"
+            className="text-[13px] font-bold text-iris"
+            onClick={() => setArchiveOpen((v) => !v)}
+          >
+            {archiveOpen ? '▾' : '▸'} Archive · {archived.length} completed
+          </button>
+          {archiveOpen && (
+            <ul className="mt-3 space-y-2">
+              {archived.map((o) => (
+                <li
+                  key={o.id}
+                  className="flex items-baseline justify-between rounded-xl border border-ink/10 px-3 py-2 text-[13px]"
+                >
+                  <span className="font-bold">
+                    {o.order_code ? o.order_code + ' · ' : ''}
+                    {o.name || 'Customer'}
+                  </span>
+                  <span className="text-stone2">
+                    {o.final_amount ? `$${Number(o.final_amount).toFixed(2)}` : 'delivered'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function BoardCard({ o, busy, onStage }) {
+  const here = stageOf(o)
+  const paid = o.status === 'paid'
+  const hasIncident = !!o.incident_created_at
+  const smsBody = encodeURIComponent(
+    `Hi${o.name ? ' ' + String(o.name).split(' ')[0] : ''}! This is Haven & Hours — we’re on our way for your pickup.`
+  )
+  return (
+    <li className="rounded-2xl border border-ink/10 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-bold">
+          {o.order_code ? o.order_code + ' · ' : ''}
+          {o.name || 'Customer'}
+        </p>
+        <span
+          className={
+            'text-[11px] font-bold uppercase tracking-wide ' +
+            (paid ? 'text-green-700' : 'text-stone2')
+          }
+        >
+          {paid ? 'Paid' : 'Scheduled'}
+        </span>
+      </div>
+
+      {(o.pickup_date || o.pickup_window) && (
+        <p className="mt-1 text-[12px] text-stone2">
+          {o.pickup_date}
+          {o.pickup_window ? ` · ${o.pickup_window}` : ''}
+        </p>
+      )}
+      {o.address && <p className="mt-1 text-[13px] text-ink/80">{o.address}</p>}
+      {hasIncident && (
+        <p className="mt-1 text-[12px] font-bold text-iris">📸 Damage photo on file</p>
+      )}
+
+      {/* Mover de etapa */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {FULFILLMENT_STAGES.map((stage) => {
+          const isCurrent = here === stage.key
+          const isBusy = busy === `${o.id}:${stage.key}`
+          return (
+            <button
+              key={stage.key}
+              type="button"
+              disabled={isBusy || isCurrent}
+              onClick={() => onStage(o, stage.key)}
+              className={
+                'rounded-full px-3 py-1.5 text-[12px] font-bold transition ' +
+                (isCurrent
+                  ? 'bg-iris text-white'
+                  : 'border border-ink/15 text-ink hover:border-iris hover:text-iris disabled:opacity-40')
+              }
+            >
+              {isBusy ? '…' : stage.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {o.phone && (
+        <a
+          href={`sms:${o.phone}?&body=${smsBody}`}
+          className="mt-3 inline-block text-[12px] font-bold text-iris underline"
+        >
+          Text arrival time
+        </a>
+      )}
+    </li>
+  )
+}
+
 function RealOrdersPanel({ passcode }) {
   const [orders, setOrders] = useState(null) // null = loading
   const [error, setError] = useState('')
