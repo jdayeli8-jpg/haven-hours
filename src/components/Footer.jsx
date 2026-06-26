@@ -44,7 +44,7 @@ export default function Footer() {
         </div>
 
         <p className="mt-3 text-[12px] text-stone2/70">
-          © {new Date().getFullYear()} Haven &amp; Hours Laundry · Build v48
+          © {new Date().getFullYear()} Haven &amp; Hours Laundry · Build v49
         </p>
       </div>
       <PolicyModal open={policyOpen} onClose={() => setPolicyOpen(false)} />

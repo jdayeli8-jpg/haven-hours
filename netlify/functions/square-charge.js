@@ -27,6 +27,7 @@ const SQUARE_LOCATION_ID = process.env.SQUARE_LOCATION_ID || 'LSGM5HV2V8KRA'
 
 const PER_LB = 2.25
 const MINIMUM = 35
+const FROM = 'Haven & Hours <hello@havenandhours.com>'
 const round2 = (n) => Math.round(n * 100) / 100
 
 export async function handler(event) {
@@ -74,7 +75,7 @@ export async function handler(event) {
   // 1) Traer la orden (la tarjeta y el cliente salen de la base, no del navegador)
   const { data: order, error: readErr } = await supabase
     .from('orders')
-    .select('id, name, square_customer_id, square_card_id, status, coupon_code, coupon_amount')
+    .select('id, name, email, square_customer_id, square_card_id, status, coupon_code, coupon_amount')
     .eq('id', orderId)
     .single()
 
@@ -145,6 +146,27 @@ export async function handler(event) {
     const paymentId = payData.payment?.id || null
     const paymentStatus = payData.payment?.status || null
 
+    // 3b) Enviar el RECIBO al cliente (desglosado). Si falla, no rompe el cobro.
+    let emailed = false
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey && order.email) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: FROM,
+            to: [order.email],
+            subject: 'Your Haven & Hours receipt',
+            html: receiptHtml(order.name, { pounds, washFold, extra, extraNote, couponDiscount, total }),
+          }),
+        })
+        emailed = res.ok
+      } catch {
+        emailed = false
+      }
+    }
+
     // 4) Marcar la orden como pagada
     const { error: updErr } = await supabase
       .from('orders')
@@ -163,10 +185,10 @@ export async function handler(event) {
     if (updErr) {
       // El cobro SÍ ocurrió; avisamos pero no lo tratamos como falla de cobro.
       console.warn('[Haven & Hours] Cobro OK, pero no se pudo actualizar la orden:', updErr.message)
-      return json(200, { ok: true, charged: true, washFold, extra, couponDiscount, total, paymentId, paymentStatus, name: order.name, warning: 'order_not_updated' }, headers)
+      return json(200, { ok: true, charged: true, emailed, washFold, extra, couponDiscount, total, paymentId, paymentStatus, name: order.name, warning: 'order_not_updated' }, headers)
     }
 
-    return json(200, { ok: true, charged: true, washFold, extra, couponDiscount, total, paymentId, paymentStatus, name: order.name }, headers)
+    return json(200, { ok: true, charged: true, emailed, washFold, extra, couponDiscount, total, paymentId, paymentStatus, name: order.name }, headers)
   } catch (e) {
     // Error de red: regresamos el cupón a activo si lo habíamos consumido.
     if (couponRedeemed) {
@@ -177,6 +199,44 @@ export async function handler(event) {
     }
     return json(502, { ok: false, error: 'Error de red al cobrar. Intenta otra vez.' }, headers)
   }
+}
+
+function receiptHtml(name, { pounds, washFold, extra, extraNote, couponDiscount, total }) {
+  const hi = name ? `Hi ${String(name).split(' ')[0]},` : 'Hi there,'
+  const row = (label, value, strong) =>
+    `<tr>
+      <td style="padding:8px 0;color:#2b2733;${strong ? 'font-weight:700;' : ''}">${label}</td>
+      <td style="padding:8px 0;text-align:right;color:#2b2733;${strong ? 'font-weight:700;' : ''}">${value}</td>
+    </tr>`
+
+  let rows = row(`Wash &amp; Fold &middot; ${pounds} lb`, `$${washFold.toFixed(2)}`)
+  if (extra > 0) {
+    rows += row(`Dry cleaning${extraNote ? ' &middot; ' + escapeHtml(extraNote) : ''}`, `$${extra.toFixed(2)}`)
+  }
+  if (couponDiscount > 0) {
+    rows += row('Coupon', `&minus;$${couponDiscount.toFixed(2)}`)
+  }
+
+  return `<!doctype html><html><body style="margin:0;background:#F4F1EC;font-family:Georgia,'Times New Roman',serif;">
+    <div style="max-width:520px;margin:0 auto;padding:32px 24px;">
+      <h1 style="font-size:24px;color:#463E59;margin:0 0 4px;">Haven &amp; Hours</h1>
+      <p style="font-size:13px;color:#7a7580;margin:0 0 24px;letter-spacing:.04em;text-transform:uppercase;">Your receipt</p>
+      <p style="font-size:16px;color:#2b2733;margin:0 0 8px;">${hi}</p>
+      <p style="font-size:16px;color:#2b2733;line-height:1.6;margin:0 0 20px;">Your laundry is all taken care of, and you've been charged. Here's the breakdown:</p>
+      <table style="width:100%;border-collapse:collapse;font-size:15px;border-top:1px solid #e4e0d8;border-bottom:1px solid #e4e0d8;margin-bottom:8px;">
+        ${rows}
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:17px;">
+        ${row('Total charged', `$${total.toFixed(2)}`, true)}
+      </table>
+      <p style="font-size:14px;color:#7a7580;line-height:1.6;margin:24px 0 0;">Every order is washed separately with care. Thank you for choosing Haven &amp; Hours — we'll see you next time.</p>
+      <p style="font-size:13px;color:#9a96a0;margin:20px 0 0;">Questions? Just reply to this email or reach us at hello@havenandhours.com.</p>
+    </div>
+  </body></html>`
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
 function json(statusCode, payload, headers) {
