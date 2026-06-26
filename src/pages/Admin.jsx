@@ -496,7 +496,7 @@ function RealOrdersPanel({ passcode }) {
             return (
               <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-bold">{o.name || 'Customer'}</p>
+                  <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
                   <p className="text-[12px] text-stone2">
                     est. ~${Number(o.estimate || 0).toFixed(2)}
                   </p>
@@ -750,7 +750,7 @@ function StatusPanel({ passcode }) {
             return (
               <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-bold">{o.name || 'Customer'}</p>
+                  <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
                   <span className="text-[11px] font-bold uppercase tracking-wide text-stone2">
                     {o.status === 'paid' ? 'Paid' : 'Scheduled'}
                   </span>
@@ -944,7 +944,7 @@ function IncidentPanel({ passcode }) {
             return (
               <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-bold">{o.name || 'Customer'}</p>
+                  <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
                   {hasIncident && !justSaved && (
                     <span className="text-[11px] font-bold uppercase tracking-wide text-iris">
                       Photo on file
@@ -1062,7 +1062,7 @@ function RoutePanel({ passcode }) {
   const Card = ({ o, isToday }) => (
     <li className="rounded-2xl border border-ink/10 p-4">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="font-bold">{o.name || 'Customer'}</p>
+        <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
         <span className="text-[12px] text-stone2">{o.pickup_window}</span>
       </div>
       {o.address && <p className="mt-1 text-[13px] text-ink/75">{o.address}</p>}

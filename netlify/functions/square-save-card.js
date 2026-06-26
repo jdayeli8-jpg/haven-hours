@@ -67,6 +67,7 @@ export async function handler(event) {
   const name = String(body.name || '').trim()
   const email = String(body.email || '').trim().toLowerCase()
   const phone = String(body.phone || '').trim()
+  const orderCode = String(body.orderCode || '').trim().slice(0, 20) || null
   if (!name) return json(400, { ok: false, error: 'Please enter your name.' }, headers)
   if (!isEmail(email)) return json(400, { ok: false, error: 'Please enter a valid email.' }, headers)
 
@@ -142,6 +143,8 @@ export async function handler(event) {
         name,
         email,
         phone: phone || null,
+        order_code: orderCode,
+        stage: 'new',
         zip: body.zip || null,
         pickup_date: body.pickupDate || null,
         pickup_window: body.pickupWindow || null,

@@ -144,6 +144,7 @@ export default function Checkout({ estPounds = 14 }) {
           name: contact.name.trim(),
           email: contact.email.trim().toLowerCase(),
           phone: contact.phone.trim(),
+          orderCode: order?.id,
           pickupDate: order?.pickup?.date,
           pickupWindow: order?.pickup?.window,
           address: order?.pickup?.address,
