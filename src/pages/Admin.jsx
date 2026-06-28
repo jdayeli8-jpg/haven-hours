@@ -464,7 +464,7 @@ function OrdersBoard({ passcode }) {
             </p>
             <ul className="mt-2 space-y-3">
               {inCol.map((o) => (
-                <BoardCard key={o.id} o={o} busy={busy} onStage={setStage} />
+                <BoardCard key={o.id} o={o} busy={busy} onStage={setStage} passcode={passcode} />
               ))}
             </ul>
           </div>
@@ -504,10 +504,51 @@ function OrdersBoard({ passcode }) {
   )
 }
 
-function BoardCard({ o, busy, onStage }) {
+function BoardCard({ o, busy, onStage, passcode }) {
   const here = stageOf(o)
   const paid = o.status === 'paid'
   const hasIncident = !!o.incident_created_at
+  const [photoOpen, setPhotoOpen] = useState(false)
+  const [readyPhoto, setReadyPhoto] = useState(null)
+  const [readyNote, setReadyNote] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sentMsg, setSentMsg] = useState(o.ready_created_at ? 'Ready photo sent ✓' : '')
+  const [photoErr, setPhotoErr] = useState('')
+
+  const onPickPhoto = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    setPhotoErr('')
+    try {
+      setReadyPhoto(await compressImage(file))
+    } catch {
+      setPhotoErr('Could not read that image.')
+    }
+  }
+
+  const sendReady = async () => {
+    if (!readyPhoto || sending) return
+    setSending(true)
+    setPhotoErr('')
+    try {
+      const res = await fetch('/api/ready-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: o.id, photo: readyPhoto, note: readyNote.trim(), passcode }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not send.')
+      setSentMsg('Ready photo sent ✓')
+      setPhotoOpen(false)
+      setReadyPhoto(null)
+      setReadyNote('')
+    } catch (err) {
+      setPhotoErr(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
+
   const smsBody = encodeURIComponent(
     `Hi${o.name ? ' ' + String(o.name).split(' ')[0] : ''}! This is Haven & Hours — we’re on our way for your pickup.`
   )
@@ -571,6 +612,69 @@ function BoardCard({ o, busy, onStage }) {
           Text arrival time
         </a>
       )}
+
+      {/* Foto de "ropa lista" (tarjeta digital de gracias) */}
+      <div className="mt-3 border-t border-ink/10 pt-3">
+        {!photoOpen ? (
+          <button
+            type="button"
+            className="text-[12px] font-bold text-iris"
+            onClick={() => setPhotoOpen(true)}
+          >
+            📸 {sentMsg ? 'Send another ready photo' : 'Send “ready” photo'}
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[12px] font-bold text-ink">Photo of the finished laundry</p>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={onPickPhoto}
+              className="block w-full text-[12px]"
+            />
+            {readyPhoto && (
+              <img
+                src={readyPhoto}
+                alt="Finished laundry preview"
+                className="max-h-32 rounded-lg border border-ink/10"
+              />
+            )}
+            <textarea
+              rows={2}
+              value={readyNote}
+              onChange={(e) => setReadyNote(e.target.value)}
+              placeholder="Optional note to the customer…"
+              className="w-full resize-none rounded-xl border border-ink/15 bg-white px-3 py-2 text-[13px] outline-none focus:border-iris"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!readyPhoto || sending}
+                onClick={sendReady}
+                className="rounded-full bg-iris px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
+              >
+                {sending ? 'Sending…' : 'Send to customer'}
+              </button>
+              <button
+                type="button"
+                className="text-[12px] text-stone2"
+                onClick={() => {
+                  setPhotoOpen(false)
+                  setReadyPhoto(null)
+                  setPhotoErr('')
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {photoErr && <p className="mt-1 text-[12px] text-[#8C3A2B]">{photoErr}</p>}
+        {sentMsg && !photoOpen && (
+          <p className="mt-1 text-[12px] font-bold text-green-700">{sentMsg}</p>
+        )}
+      </div>
     </li>
   )
 }

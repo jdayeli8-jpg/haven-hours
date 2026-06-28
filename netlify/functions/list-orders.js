@@ -43,7 +43,7 @@ export async function handler(event) {
   if (body.scope === 'recent') {
     const { data, error } = await supabase
       .from('orders')
-      .select('id, order_code, stage, name, email, phone, estimate, final_amount, status, fulfillment_status, incident_created_at, incident_decision, pickup_date, pickup_window, address')
+      .select('id, order_code, stage, name, email, phone, estimate, final_amount, status, fulfillment_status, incident_created_at, incident_decision, ready_created_at, pickup_date, pickup_window, address')
       .order('id', { ascending: false })
       .limit(30)
     if (error) return json(502, { ok: false, error: error.message }, headers)
