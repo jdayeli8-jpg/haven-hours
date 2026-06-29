@@ -131,6 +131,7 @@ function OrdersBoard({ passcode }) {
   const [busy, setBusy] = useState(null) // `${id}:${stage}`
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [lastSync, setLastSync] = useState(null)
+  const [detailsId, setDetailsId] = useState(null) // orden abierta en "Ver detalles"
   const firstLoad = useRef(true)
 
   // quiet = recarga silenciosa (no muestra "Loading…", no borra lo que ya hay)
@@ -244,6 +245,7 @@ function OrdersBoard({ passcode }) {
                   busy={busy}
                   onStage={setStage}
                   onPatch={patchOrder}
+                  onDetails={setDetailsId}
                   passcode={passcode}
                 />
               ))}
@@ -266,14 +268,23 @@ function OrdersBoard({ passcode }) {
               {archived.map((o) => (
                 <li
                   key={o.id}
-                  className="flex items-baseline justify-between rounded-xl border border-ink/10 px-3 py-2 text-[13px]"
+                  className="flex items-baseline justify-between gap-2 rounded-xl border border-ink/10 px-3 py-2 text-[13px]"
                 >
                   <span className="font-bold">
                     {o.order_code ? o.order_code + ' · ' : ''}
                     {o.name || 'Customer'}
                   </span>
-                  <span className="text-stone2">
-                    {o.final_amount ? `$${Number(o.final_amount).toFixed(2)}` : 'delivered'}
+                  <span className="flex items-baseline gap-3">
+                    <span className="text-stone2">
+                      {o.final_amount ? `$${Number(o.final_amount).toFixed(2)}` : 'delivered'}
+                    </span>
+                    <button
+                      type="button"
+                      className="font-bold text-iris underline"
+                      onClick={() => setDetailsId(o.id)}
+                    >
+                      View details
+                    </button>
                   </span>
                 </li>
               ))}
@@ -281,15 +292,25 @@ function OrdersBoard({ passcode }) {
           )}
         </div>
       )}
+
+      {detailsId && (
+        <OrderDetailsModal
+          orderId={detailsId}
+          passcode={passcode}
+          onClose={() => setDetailsId(null)}
+          onJump={(id) => setDetailsId(id)}
+        />
+      )}
     </section>
   )
 }
 
 /* ---------------- Una tarjeta de orden (con TODO adentro) ---------------- */
-function BoardCard({ o, busy, onStage, onPatch, passcode }) {
+function BoardCard({ o, busy, onStage, onPatch, onDetails, passcode }) {
   const here = stageOf(o)
   const paid = o.status === 'paid'
   const hasIncident = !!o.incident_created_at
+  const hasDelivery = !!o.delivery_created_at
   const hasCard = !!o.square_card_id
 
   // ---- Pesar y cobrar ----
@@ -448,6 +469,50 @@ function BoardCard({ o, busy, onStage, onPatch, passcode }) {
     }
   }
 
+  // ---- Foto de prueba de entrega (proof of delivery) ----
+  const [delivOpen, setDelivOpen] = useState(false)
+  const [delivPhoto, setDelivPhoto] = useState(null)
+  const [delivNote, setDelivNote] = useState('')
+  const [delivBusy, setDelivBusy] = useState(false)
+  const [delivErr, setDelivErr] = useState('')
+  const [delivMsg, setDelivMsg] = useState(hasDelivery ? 'Delivery proof sent ✓' : '')
+
+  const pickDeliv = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    setDelivErr('')
+    try {
+      setDelivPhoto(await compressImage(file))
+    } catch {
+      setDelivErr('Could not read that image.')
+    }
+  }
+
+  const sendDeliv = async () => {
+    if (!delivPhoto || delivBusy) return
+    setDelivBusy(true)
+    setDelivErr('')
+    try {
+      const res = await fetch('/api/delivery-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: o.id, photo: delivPhoto, note: delivNote.trim(), passcode }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not send.')
+      setDelivMsg('Delivery proof sent ✓')
+      // Enviar prueba TAMBIÉN marca la orden como entregada → se va al archivo.
+      onPatch(o.id, { delivery_created_at: new Date().toISOString(), fulfillment_status: 'delivered' })
+      setDelivOpen(false)
+      setDelivPhoto(null)
+      setDelivNote('')
+    } catch (err) {
+      setDelivErr(err.message)
+    } finally {
+      setDelivBusy(false)
+    }
+  }
+
   const smsBody = encodeURIComponent(
     `Hi${o.name ? ' ' + String(o.name).split(' ')[0] : ''}! This is Haven & Hours — we’re on our way for your pickup.`
   )
@@ -514,14 +579,23 @@ function BoardCard({ o, busy, onStage, onPatch, passcode }) {
         })}
       </div>
 
-      {o.phone && (
-        <a
-          href={`sms:${o.phone}?&body=${smsBody}`}
-          className="mt-3 inline-block text-[12px] font-bold text-iris underline"
+      <div className="mt-3 flex items-center gap-4">
+        {o.phone && (
+          <a
+            href={`sms:${o.phone}?&body=${smsBody}`}
+            className="inline-block text-[12px] font-bold text-iris underline"
+          >
+            Text arrival time
+          </a>
+        )}
+        <button
+          type="button"
+          className="text-[12px] font-bold text-iris underline"
+          onClick={() => onDetails(o.id)}
         >
-          Text arrival time
-        </a>
-      )}
+          View details
+        </button>
+      </div>
 
       {/* ---- Pesar y cobrar ---- */}
       <div className="mt-3 border-t border-ink/10 pt-3">
@@ -676,6 +750,7 @@ function BoardCard({ o, busy, onStage, onPatch, passcode }) {
 
       {/* ---- Foto de "ropa lista" ---- */}
       <div className="mt-3 border-t border-ink/10 pt-3">
+        {readyMsg && <p className="mb-1 text-[12px] font-bold text-iris">{readyMsg}</p>}
         {!readyOpen ? (
           <button
             type="button"
@@ -714,7 +789,53 @@ function BoardCard({ o, busy, onStage, onPatch, passcode }) {
             </div>
           </div>
         )}
-        {readyMsg && !readyOpen && <p className="mt-1 text-[12px] font-bold text-iris">{readyMsg}</p>}
+      </div>
+
+      {/* ---- Foto de prueba de entrega (proof of delivery) ---- */}
+      <div className="mt-3 border-t border-ink/10 pt-3">
+        {delivMsg && <p className="mb-1 text-[12px] font-bold text-green-700">📦 {delivMsg}</p>}
+        {!delivOpen ? (
+          <button
+            type="button"
+            className="text-[12px] font-bold text-iris"
+            onClick={() => setDelivOpen(true)}
+          >
+            📦 {delivMsg ? 'Add another delivery proof' : 'Send delivery proof'}
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[12px] font-bold text-ink">Photo of the delivered package</p>
+            <p className="text-[11px] text-stone2">
+              Sending this also marks the order <span className="font-bold">Delivered</span> and emails the
+              customer “your laundry has arrived.”
+            </p>
+            <input type="file" accept="image/*" capture="environment" onChange={pickDeliv} className="block w-full text-[12px]" />
+            {delivPhoto && (
+              <img src={delivPhoto} alt="Delivery preview" className="max-h-32 rounded-lg border border-ink/10" />
+            )}
+            <textarea
+              rows={2}
+              value={delivNote}
+              onChange={(e) => setDelivNote(e.target.value)}
+              placeholder="Optional note (e.g. left by the front door, behind the planter)"
+              className="w-full resize-none rounded-xl border border-ink/15 bg-white px-3 py-2 text-[13px] outline-none focus:border-iris"
+            />
+            {delivErr && <p className="text-[12px] font-bold text-[#8C3A2B]">{delivErr}</p>}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!delivPhoto || delivBusy}
+                onClick={sendDeliv}
+                className="rounded-full bg-iris px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
+              >
+                {delivBusy ? 'Sending…' : 'Send proof & mark delivered'}
+              </button>
+              <button type="button" className="text-[12px] text-stone2" onClick={() => setDelivOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </li>
   )
@@ -749,4 +870,235 @@ function compressImage(file) {
     }
     reader.readAsDataURL(file)
   })
+}
+
+/* ---------------- Modal: detalles de una orden + historial del cliente ---------------- */
+function fmtMoney(x) {
+  return x == null || x === '' ? '—' : `$${Number(x).toFixed(2)}`
+}
+function fmtDateTime(x) {
+  if (!x) return '—'
+  try {
+    return new Date(x).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  } catch {
+    return String(x)
+  }
+}
+
+function Row({ label, children }) {
+  return (
+    <div className="flex justify-between gap-4 py-1.5 text-[13px]">
+      <span className="text-stone2">{label}</span>
+      <span className="text-right font-bold text-ink">{children}</span>
+    </div>
+  )
+}
+
+function OrderDetailsModal({ orderId, passcode, onClose, onJump }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    setError('')
+    setData(null)
+    fetch('/api/order-details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passcode, orderId }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return
+        if (!d.ok) throw new Error(d.error || 'Could not load details.')
+        setData(d)
+      })
+      .catch((err) => alive && setError(err.message))
+      .finally(() => alive && setLoading(false))
+    return () => {
+      alive = false
+    }
+  }, [orderId, passcode])
+
+  const o = data?.order
+  const history = data?.history || []
+  const paid = o && o.status === 'paid'
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="my-6 w-full max-w-lg rounded-2xl bg-ivory p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-baseline justify-between">
+          <p className="eyebrow">Order details</p>
+          <button type="button" className="text-[13px] font-bold text-iris" onClick={onClose}>
+            ✕ Close
+          </button>
+        </div>
+
+        {loading && <p className="mt-4 text-sm text-stone2">Loading…</p>}
+        {error && <p className="mt-4 text-sm font-bold text-[#8C3A2B]">{error}</p>}
+
+        {o && (
+          <div className="mt-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display text-2xl">
+                {o.order_code ? o.order_code + ' · ' : ''}
+                {o.name || 'Customer'}
+              </h2>
+              <span
+                className={
+                  'text-[11px] font-bold uppercase tracking-wide ' +
+                  (paid ? 'text-green-700' : 'text-stone2')
+                }
+              >
+                {paid ? 'Paid' : 'Scheduled'}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[13px] text-stone2">
+              {o.email}
+              {o.phone ? ` · ${o.phone}` : ''}
+            </p>
+
+            {/* Pickup */}
+            <div className="mt-4 rounded-xl border border-ink/10 p-3">
+              <p className="text-[12px] font-bold uppercase tracking-wide text-stone2">Pickup</p>
+              <Row label="Date">{o.pickup_date || '—'}</Row>
+              <Row label="Window">{o.pickup_window || '—'}</Row>
+              <Row label="Address">{o.address || '—'}</Row>
+              {o.notes && <Row label="Notes">{o.notes}</Row>}
+              <Row label="Stage">{o.fulfillment_status || 'new'}</Row>
+            </div>
+
+            {/* Charge */}
+            <div className="mt-3 rounded-xl border border-ink/10 p-3">
+              <p className="text-[12px] font-bold uppercase tracking-wide text-stone2">Charge</p>
+              <Row label="Estimate">{fmtMoney(o.estimate)}</Row>
+              <Row label="Final pounds">{o.final_pounds != null ? `${o.final_pounds} lb` : '—'}</Row>
+              {o.extra_amount > 0 && (
+                <Row label="Dry cleaning">
+                  {fmtMoney(o.extra_amount)}
+                  {o.extra_note ? ` · ${o.extra_note}` : ''}
+                </Row>
+              )}
+              {o.coupon_discount > 0 && <Row label="Coupon">- {fmtMoney(o.coupon_discount)}</Row>}
+              <Row label="Total charged">
+                <span className={paid ? 'text-green-700' : ''}>{fmtMoney(o.final_amount)}</span>
+              </Row>
+              <Row label="Paid at">{fmtDateTime(o.paid_at)}</Row>
+            </div>
+
+            {/* Damage */}
+            {o.incident_created_at && (
+              <div className="mt-3 rounded-xl border border-ink/10 p-3">
+                <p className="text-[12px] font-bold uppercase tracking-wide text-iris">Damage report</p>
+                <Row label="Reported">{fmtDateTime(o.incident_created_at)}</Row>
+                {o.incident_note && <Row label="Note">{o.incident_note}</Row>}
+                <Row label="Customer chose">
+                  {o.incident_decision === 'approve'
+                    ? 'Wash it anyway'
+                    : o.incident_decision === 'return'
+                      ? 'Return it untouched'
+                      : 'Waiting for reply'}
+                </Row>
+                {o.incident_photo && (
+                  <img
+                    src={o.incident_photo}
+                    alt="Damage"
+                    className="mt-2 max-h-56 rounded-lg border border-ink/10"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Ready photo */}
+            {o.ready_created_at && (
+              <div className="mt-3 rounded-xl border border-ink/10 p-3">
+                <p className="text-[12px] font-bold uppercase tracking-wide text-iris">Ready photo</p>
+                <Row label="Sent">{fmtDateTime(o.ready_created_at)}</Row>
+                {o.ready_note && <Row label="Note">{o.ready_note}</Row>}
+                {o.ready_photo && (
+                  <img
+                    src={o.ready_photo}
+                    alt="Finished laundry"
+                    className="mt-2 max-h-56 rounded-lg border border-ink/10"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Delivery proof */}
+            {o.delivery_created_at && (
+              <div className="mt-3 rounded-xl border border-ink/10 p-3">
+                <p className="text-[12px] font-bold uppercase tracking-wide text-green-700">Delivery proof</p>
+                <Row label="Delivered">{fmtDateTime(o.delivery_created_at)}</Row>
+                {o.delivery_note && <Row label="Note">{o.delivery_note}</Row>}
+                {o.delivery_photo && (
+                  <img
+                    src={o.delivery_photo}
+                    alt="Delivered package"
+                    className="mt-2 max-h-56 rounded-lg border border-ink/10"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Customer history */}
+            {history.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[12px] font-bold uppercase tracking-wide text-stone2">
+                  This customer · {history.length} {history.length === 1 ? 'order' : 'orders'}
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {history.map((h) => {
+                    const isCurrent = h.id === o.id
+                    return (
+                      <li key={h.id}>
+                        <button
+                          type="button"
+                          disabled={isCurrent}
+                          onClick={() => onJump(h.id)}
+                          className={
+                            'flex w-full items-baseline justify-between gap-3 rounded-xl border px-3 py-2 text-left text-[13px] ' +
+                            (isCurrent
+                              ? 'border-iris bg-iris-tint/40'
+                              : 'border-ink/10 hover:border-iris')
+                          }
+                        >
+                          <span className="font-bold">
+                            {h.order_code ? h.order_code + ' · ' : ''}
+                            {h.pickup_date || '—'}
+                            {isCurrent ? '  (this one)' : ''}
+                          </span>
+                          <span className="text-stone2">
+                            {h.status === 'paid'
+                              ? fmtMoney(h.final_amount)
+                              : h.fulfillment_status === 'delivered'
+                                ? 'delivered'
+                                : 'scheduled'}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
