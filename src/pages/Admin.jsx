@@ -1,10 +1,4 @@
-import { useState, useEffect } from 'react'
-import {
-  useStore,
-  STATUS_STEPS,
-  quoteTotal,
-} from '../context/StoreContext.jsx'
-import ClotheslineTracker from '../components/ClotheslineTracker.jsx'
+import { useState, useEffect, useRef } from 'react'
 
 // Tus precios de tintorería (App Price). Para cambiarlos, solo edita el número.
 const DRY_CLEAN = [
@@ -15,6 +9,30 @@ const DRY_CLEAN = [
   { key: 'comforter', label: 'Comforter (Q/K)', price: 40.5 },
 ]
 
+// Las columnas del tablero, en orden de flujo de trabajo.
+const BOARD_COLUMNS = [
+  { key: 'new', label: 'New orders' },
+  { key: 'collected', label: 'Collected' },
+  { key: 'washing', label: 'In the wash' },
+  { key: 'ready', label: 'Ready' },
+]
+
+// Los botones para mover una orden de etapa.
+const FULFILLMENT_STAGES = [
+  { key: 'collected', label: 'Collected' },
+  { key: 'washing', label: 'In the wash' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'delivered', label: 'Delivered' },
+]
+
+function stageOf(o) {
+  const f = o.fulfillment_status
+  return f === 'collected' || f === 'washing' || f === 'ready' || f === 'delivered' ? f : 'new'
+}
+
+/* ============================================================
+   PANTALLA PRINCIPAL — login + un solo tablero
+   ============================================================ */
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false)
   const [passcode, setPasscode] = useState('')
@@ -23,7 +41,9 @@ export default function Admin() {
       <p className="eyebrow">Back of house</p>
       <h1 className="mt-2 font-display text-4xl">Admin</h1>
       {unlocked ? (
-        <AdminPanel passcode={passcode} />
+        <div className="mt-7">
+          <OrdersBoard passcode={passcode} />
+        </div>
       ) : (
         <Gate
           onUnlock={(code) => {
@@ -102,284 +122,23 @@ function Gate({ onUnlock }) {
   )
 }
 
-/* ---------------- Panel ---------------- */
-function AdminPanel({ passcode }) {
-  const {
-    order,
-    advanceStatus,
-    setFinalPounds,
-    reportIncident,
-    recordPayment,
-  } = useStore()
-
-  const [pounds, setPounds] = useState('')
-  const [charging, setCharging] = useState(false)
-  const [chargeError, setChargeError] = useState('')
-
-  if (!order) {
-    return (
-      <div className="mt-7 space-y-6">
-        <OrdersBoard passcode={passcode} />
-        <RealOrdersPanel passcode={passcode} />
-        <IncidentPanel passcode={passcode} />
-        <div className="card text-center">
-          <p className="font-display text-2xl">No demo order loaded.</p>
-          <p className="mt-2 text-sm text-stone2">
-            The live orders above come straight from your database. The demo flow
-            shows up here when you place a test order from{' '}
-            <span className="font-bold">My Order</span>.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const parsedPounds = parseFloat(pounds)
-  const validPounds = Number.isFinite(parsedPounds) && parsedPounds > 0
-  const services = order?.services || {}
-  const quote = validPounds ? quoteTotal(parsedPounds, services) : null
-  const atFinalStep = order.statusIndex >= STATUS_STEPS.length - 1
-
-  const charge = async () => {
-    if (!validPounds) {
-      setChargeError('Enter the final weight first.')
-      return
-    }
-    setCharging(true)
-    setChargeError('')
-    try {
-      const res = await fetch('/api/process-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pounds: parsedPounds,
-          ironingPieces: services.ironingPieces || 0,
-          beddingKing: services.beddingKing || 0,
-          beddingQueenFull: services.beddingQueenFull || 0,
-          beddingTwin: services.beddingTwin || 0,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Payment failed.')
-      setFinalPounds(parsedPounds)
-      const discount = order.authorization?.discount || 0
-      const finalTotal = Math.max(data.total - discount, 0)
-      recordPayment({
-        intentId: data.paymentIntent.id,
-        amount: Math.round(finalTotal * 100),
-        total: finalTotal,
-        discount,
-        breakdown: data.breakdown,
-        method: order.authorization?.method || 'card',
-        chargedAt: new Date().toISOString(),
-      })
-    } catch (err) {
-      setChargeError(
-        err.message === 'Failed to fetch'
-          ? 'Couldn’t reach the payment function. Run the app with `netlify dev` so /api/* is available.'
-          : err.message
-      )
-    } finally {
-      setCharging(false)
-    }
-  }
-
-  return (
-    <div className="mt-7 space-y-6">
-      {/* Command center — every order as a card, by stage */}
-      <OrdersBoard passcode={passcode} />
-
-      {/* Real orders from the database — weigh & charge the saved card */}
-      <RealOrdersPanel passcode={passcode} />
-
-      {/* Damage photos — attach a garment photo + note to a real order */}
-      <IncidentPanel passcode={passcode} />
-
-      {/* Today's order */}
-      <section className="card">
-        <div className="flex items-baseline justify-between">
-          <p className="eyebrow">Today · Order {order.id}</p>
-          <p className="text-[12px] text-stone2">
-            {order.pickup.date} · {order.pickup.window}
-          </p>
-        </div>
-        <p className="mt-3 text-sm">
-          <span className="text-stone2">Pickup at</span>{' '}
-          <span className="font-bold">{order.pickup.address}</span>
-        </p>
-        {order.pickup.notes && (
-          <p className="mt-1 text-sm text-ink/70">“{order.pickup.notes}”</p>
-        )}
-        {order.preferences && (
-          <p className="mt-2 text-[12px] text-stone2">
-            Wash with: <span className="font-bold text-ink/70">{order.preferences.detergent}</span> ·
-            Softener: <span className="font-bold text-ink/70">{order.preferences.softener}</span>
-            <span className="mt-1 block">
-              Whites:{' '}
-              {order.preferences.bleach ? (
-                <span className="font-bold text-[#8C3A2B]">
-                  ⚠ Chlorine bleach requested (consented) — marked items only
-                </span>
-              ) : (
-                <span className="font-bold text-ink/70">Oxygen &amp; baking soda treatment</span>
-              )}
-            </span>
-          </p>
-        )}
-
-        <div className="mt-5">
-          <ClotheslineTracker statusIndex={order.statusIndex} />
-        </div>
-
-        <button
-          type="button"
-          className="btn-primary mt-5 w-full"
-          onClick={advanceStatus}
-          disabled={atFinalStep}
-        >
-          {atFinalStep
-            ? `${STATUS_STEPS[STATUS_STEPS.length - 1]} — final stage`
-            : `Advance to “${STATUS_STEPS[order.statusIndex + 1]}”`}
-        </button>
-      </section>
-
-      {/* Weight & total */}
-      <section className="card">
-        <p className="eyebrow">Final weight &amp; total</p>
-        <div className="mt-4 flex items-end gap-3">
-          <div className="flex-1">
-            <label htmlFor="pounds" className="label">
-              Final pounds
-            </label>
-            <input
-              id="pounds"
-              type="number"
-              min="0"
-              step="0.1"
-              inputMode="decimal"
-              className="field"
-              placeholder="e.g. 12.5"
-              value={pounds}
-              onChange={(e) => setPounds(e.target.value)}
-            />
-          </div>
-          <div className="pb-1 text-right">
-            <p className="text-[12px] text-stone2">Total</p>
-            <p className="font-display text-3xl text-iris">
-              {quote ? `$${quote.total.toFixed(2)}` : '—'}
-            </p>
-          </div>
-        </div>
-        <p className="mt-2 text-[12px] text-stone2">
-          $2.25 / lb
-          {services.ironingPieces > 0 && ` · ironing ×${services.ironingPieces} ($3.55 ea)`}
-          {services.beddingKing > 0 && ` · king bedding ×${services.beddingKing} ($28 ea)`}
-          {services.beddingQueenFull > 0 && ` · queen/full bedding ×${services.beddingQueenFull} ($26 ea)`}
-          {services.beddingTwin > 0 && ` · twin bedding ×${services.beddingTwin} ($18 ea)`}
-          {quote?.minimumApplied ? ' · $35 minimum applied' : ' · $35 minimum'}
-        </p>
-        {services.dryCleaning && (
-          <p className="mt-1 text-[12px] font-bold text-iris">
-            Dry cleaning run requested — add the items below; included in the one charge.
-          </p>
-        )}
-      </section>
-
-      {/* Incident */}
-      <section className="card">
-        <p className="eyebrow">Garment incident</p>
-        {order.incident ? (
-          <div className="mt-3 text-sm">
-            <p className="font-bold">Sent to customer.</p>
-            <p className="mt-1 text-ink/70">
-              {order.incident.decision === 'approve' && 'Customer approved washing the garment.'}
-              {order.incident.decision === 'return' && 'Customer asked to return it unwashed.'}
-              {!order.incident.decision && 'Waiting for the customer’s decision…'}
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="mt-2 text-sm text-ink/70">
-              Found a stain or damage at intake? Send a photo to the customer for approval.
-            </p>
-            <button
-              type="button"
-              className="btn-ghost mt-4 w-full"
-              onClick={() => reportIncident()}
-            >
-              Simulate incident photo upload
-            </button>
-          </>
-        )}
-      </section>
-
-      {/* Charge */}
-      <section className="card">
-        <p className="eyebrow">Payment</p>
-        {order.payment ? (
-          <div className="mt-3 text-sm">
-            <p className="font-bold text-iris">
-              Charged ${order.payment.total.toFixed(2)} · succeeded
-            </p>
-            <p className="mt-1 text-[12px] text-stone2">{order.payment.intentId}</p>
-          </div>
-        ) : (
-          <>
-            <p className="mt-2 text-sm text-ink/70">
-              {order.authorization
-                ? `Customer authorized ${order.authorization.method === 'apple' ? 'Apple Pay' : order.authorization.method === 'google' ? 'Google Pay' : 'their card'} at booking (est. ~$${order.authorization.estimate.toFixed(2)}). Enter the real weight to charge the exact amount.`
-                : 'The serverless function revalidates the weight and recomputes the price — the client total is never trusted.'}
-            </p>
-            <button
-              type="button"
-              className="btn-primary mt-4 w-full"
-              onClick={charge}
-              disabled={charging || !validPounds}
-            >
-              {charging
-                ? 'Charging…'
-                : quote
-                  ? `Charge $${quote.total.toFixed(2)}`
-                  : 'Charge customer'}
-            </button>
-            {chargeError && (
-              <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
-                {chargeError}
-              </p>
-            )}
-          </>
-        )}
-      </section>
-    </div>
-  )
-}
-
-/* ---------------- Live orders (Supabase) — weigh & charge ---------------- */
-// ── Fase 2a: Tablero de mando ──────────────────────────────────────────
-// Todas las órdenes como tarjetas, agrupadas por etapa, con su número.
-// Reusa /api/update-status (que también avisa al cliente por correo).
-// 'delivered' = Archivo (órdenes completadas).
-const BOARD_COLUMNS = [
-  { key: 'new', label: 'New orders' },
-  { key: 'collected', label: 'Collected' },
-  { key: 'washing', label: 'In the wash' },
-  { key: 'ready', label: 'Ready' },
-]
-
-function stageOf(o) {
-  const f = o.fulfillment_status
-  return f === 'collected' || f === 'washing' || f === 'ready' || f === 'delivered' ? f : 'new'
-}
-
+/* ============================================================
+   EL TABLERO — una tarjeta por orden, todo adentro
+   ============================================================ */
 function OrdersBoard({ passcode }) {
   const [orders, setOrders] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(null) // `${id}:${stage}`
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [lastSync, setLastSync] = useState(null)
+  const firstLoad = useRef(true)
 
-  const load = async () => {
-    setError('')
-    setOrders(null)
+  // quiet = recarga silenciosa (no muestra "Loading…", no borra lo que ya hay)
+  const load = async (quiet = false) => {
+    if (!quiet) {
+      setError('')
+      setOrders(null)
+    }
     try {
       const res = await fetch('/api/list-orders', {
         method: 'POST',
@@ -389,20 +148,32 @@ function OrdersBoard({ passcode }) {
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
       setOrders(data.orders || [])
+      setLastSync(new Date())
+      if (!quiet) setError('')
     } catch (err) {
-      setError(
-        err.message === 'Failed to fetch'
-          ? 'Couldn’t reach the server. Publish the app so /api works.'
-          : err.message
-      )
-      setOrders([])
+      if (!quiet) {
+        setError(
+          err.message === 'Failed to fetch'
+            ? 'Couldn’t reach the server. Publish the app so /api works.'
+            : err.message
+        )
+        setOrders([])
+      }
     }
   }
 
+  // Carga al abrir, y luego se actualiza sola cada 25 segundos.
   useEffect(() => {
-    load()
+    load(false)
+    const t = setInterval(() => load(true), 25000)
+    return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Aplica un cambio a una orden en la lista local (sin recargar todo).
+  const patchOrder = (orderId, patch) => {
+    setOrders((list) => (list || []).map((o) => (o.id === orderId ? { ...o, ...patch } : o)))
+  }
 
   const setStage = async (order, stageKey) => {
     setBusy(`${order.id}:${stageKey}`)
@@ -415,9 +186,7 @@ function OrdersBoard({ passcode }) {
       })
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Could not update.')
-      setOrders((list) =>
-        (list || []).map((o) => (o.id === order.id ? { ...o, fulfillment_status: stageKey } : o))
-      )
+      patchOrder(order.id, { fulfillment_status: stageKey })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -429,19 +198,24 @@ function OrdersBoard({ passcode }) {
   const active = list.filter((o) => stageOf(o) !== 'delivered')
   const archived = list.filter((o) => stageOf(o) === 'delivered')
 
+  const syncLabel = lastSync
+    ? `Updated ${lastSync.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+    : ''
+
   return (
     <section className="card">
       <div className="flex items-baseline justify-between">
         <p className="eyebrow">Order board · everything in one place</p>
-        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
+        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={() => load(false)}>
           Refresh
         </button>
       </div>
       <p className="mt-2 text-sm text-ink/70">
-        Each order is one card with its number. Move it along as it progresses — the
-        customer gets an email at each step. Tap <span className="font-bold">Delivered</span>{' '}
-        to send it to the archive.
+        One card per order — newest on top. Weigh &amp; charge, send a “ready” photo,
+        report damage, and move the order along, all in the same place. The board
+        refreshes itself, so a customer’s reply and a charge show up on their own.
       </p>
+      {syncLabel && <p className="mt-1 text-[11px] text-stone2">{syncLabel} · auto-refreshes</p>}
 
       {error && (
         <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
@@ -458,13 +232,20 @@ function OrdersBoard({ passcode }) {
         const inCol = active.filter((o) => stageOf(o) === col.key)
         if (inCol.length === 0) return null
         return (
-          <div key={col.key} className="mt-5">
+          <div key={col.key} className="mt-6">
             <p className="text-[12px] font-bold uppercase tracking-wide text-stone2">
               {col.label} · {inCol.length}
             </p>
             <ul className="mt-2 space-y-3">
               {inCol.map((o) => (
-                <BoardCard key={o.id} o={o} busy={busy} onStage={setStage} passcode={passcode} />
+                <BoardCard
+                  key={o.id}
+                  o={o}
+                  busy={busy}
+                  onStage={setStage}
+                  onPatch={patchOrder}
+                  passcode={passcode}
+                />
               ))}
             </ul>
           </div>
@@ -504,32 +285,149 @@ function OrdersBoard({ passcode }) {
   )
 }
 
-function BoardCard({ o, busy, onStage, passcode }) {
+/* ---------------- Una tarjeta de orden (con TODO adentro) ---------------- */
+function BoardCard({ o, busy, onStage, onPatch, passcode }) {
   const here = stageOf(o)
   const paid = o.status === 'paid'
   const hasIncident = !!o.incident_created_at
-  const [photoOpen, setPhotoOpen] = useState(false)
-  const [readyPhoto, setReadyPhoto] = useState(null)
-  const [readyNote, setReadyNote] = useState('')
-  const [sending, setSending] = useState(false)
-  const [sentMsg, setSentMsg] = useState(o.ready_created_at ? 'Ready photo sent ✓' : '')
-  const [photoErr, setPhotoErr] = useState('')
+  const hasCard = !!o.square_card_id
 
-  const onPickPhoto = async (e) => {
+  // ---- Pesar y cobrar ----
+  const [weight, setWeight] = useState('')
+  const [dryQty, setDryQtyState] = useState({}) // { suit: 2, shirt: 1 }
+  const [extraNote, setExtraNote] = useState('')
+  const [charging, setCharging] = useState(false)
+  const [chargeErr, setChargeErr] = useState('')
+  const [charged, setCharged] = useState(null) // { total, washFold, extra, couponDiscount, paymentId }
+
+  const bumpDry = (key, delta) => {
+    setDryQtyState((cur) => {
+      const next = { ...cur }
+      const v = Math.max(0, (next[key] || 0) + delta)
+      if (v === 0) delete next[key]
+      else next[key] = v
+      // recalcula la nota automática
+      const parts = []
+      for (const item of DRY_CLEAN) {
+        const q = next[item.key] || 0
+        if (q > 0) parts.push(`${q} ${item.label}`)
+      }
+      setExtraNote(parts.join(', '))
+      return next
+    })
+  }
+
+  let dryTotal = 0
+  for (const item of DRY_CLEAN) dryTotal += (dryQty[item.key] || 0) * item.price
+
+  const w = parseFloat(weight)
+  const validW = Number.isFinite(w) && w > 0
+  const wf = validW ? Math.max(w * 2.25, 35) : 0
+  const preview = validW ? wf + dryTotal : null
+
+  const doCharge = async () => {
+    if (!validW) {
+      setChargeErr('Enter the real weight first.')
+      return
+    }
+    setCharging(true)
+    setChargeErr('')
+    try {
+      const res = await fetch('/api/square-charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: o.id,
+          pounds: w,
+          extraCharge: dryTotal > 0 ? Number(dryTotal.toFixed(2)) : 0,
+          extraNote: extraNote.trim(),
+          passcode,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Charge failed.')
+      setCharged({
+        total: data.total,
+        washFold: data.washFold,
+        extra: data.extra,
+        couponDiscount: data.couponDiscount,
+        paymentId: data.paymentId,
+      })
+      // Marca pagado en la tarjeta al instante.
+      onPatch(o.id, { status: 'paid', final_amount: data.total })
+    } catch (err) {
+      setChargeErr(err.message)
+    } finally {
+      setCharging(false)
+    }
+  }
+
+  // ---- Foto de daño ----
+  const [dmgOpen, setDmgOpen] = useState(false)
+  const [dmgPhoto, setDmgPhoto] = useState(null)
+  const [dmgNote, setDmgNote] = useState('')
+  const [dmgBusy, setDmgBusy] = useState(false)
+  const [dmgErr, setDmgErr] = useState('')
+  const [dmgSent, setDmgSent] = useState(null) // { name, emailed }
+
+  const pickDmg = async (e) => {
     const file = e.target.files && e.target.files[0]
     if (!file) return
-    setPhotoErr('')
+    setDmgErr('')
+    try {
+      setDmgPhoto(await compressImage(file))
+    } catch {
+      setDmgErr('Could not read that image.')
+    }
+  }
+
+  const attachDmg = async () => {
+    if (!dmgPhoto || dmgBusy) return
+    setDmgBusy(true)
+    setDmgErr('')
+    try {
+      const res = await fetch('/api/report-incident', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: o.id, passcode, photo: dmgPhoto, note: dmgNote.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Upload failed.')
+      setDmgSent({ name: data.name || 'customer', emailed: data.emailed })
+      onPatch(o.id, { incident_created_at: new Date().toISOString() })
+      setDmgPhoto(null)
+      setDmgNote('')
+      setDmgOpen(false)
+    } catch (err) {
+      setDmgErr(err.message)
+    } finally {
+      setDmgBusy(false)
+    }
+  }
+
+  // ---- Foto de "ropa lista" ----
+  const [readyOpen, setReadyOpen] = useState(false)
+  const [readyPhoto, setReadyPhoto] = useState(null)
+  const [readyNote, setReadyNote] = useState('')
+  const [readyBusy, setReadyBusy] = useState(false)
+  const [readyErr, setReadyErr] = useState('')
+  const [readyMsg, setReadyMsg] = useState(o.ready_created_at ? 'Ready photo sent ✓' : '')
+
+  const pickReady = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    setReadyErr('')
     try {
       setReadyPhoto(await compressImage(file))
     } catch {
-      setPhotoErr('Could not read that image.')
+      setReadyErr('Could not read that image.')
     }
   }
 
   const sendReady = async () => {
-    if (!readyPhoto || sending) return
-    setSending(true)
-    setPhotoErr('')
+    if (!readyPhoto || readyBusy) return
+    setReadyBusy(true)
+    setReadyErr('')
     try {
       const res = await fetch('/api/ready-photo', {
         method: 'POST',
@@ -538,22 +436,27 @@ function BoardCard({ o, busy, onStage, passcode }) {
       })
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Could not send.')
-      setSentMsg('Ready photo sent ✓')
-      setPhotoOpen(false)
+      setReadyMsg('Ready photo sent ✓')
+      onPatch(o.id, { ready_created_at: new Date().toISOString() })
+      setReadyOpen(false)
       setReadyPhoto(null)
       setReadyNote('')
     } catch (err) {
-      setPhotoErr(err.message)
+      setReadyErr(err.message)
     } finally {
-      setSending(false)
+      setReadyBusy(false)
     }
   }
 
   const smsBody = encodeURIComponent(
     `Hi${o.name ? ' ' + String(o.name).split(' ')[0] : ''}! This is Haven & Hours — we’re on our way for your pickup.`
   )
+
+  const showCharge = !paid && hasCard
+
   return (
     <li className="rounded-2xl border border-ink/10 p-4">
+      {/* Encabezado */}
       <div className="flex items-baseline justify-between gap-3">
         <p className="font-bold">
           {o.order_code ? o.order_code + ' · ' : ''}
@@ -576,11 +479,18 @@ function BoardCard({ o, busy, onStage, passcode }) {
         </p>
       )}
       {o.address && <p className="mt-1 text-[13px] text-ink/80">{o.address}</p>}
+
+      {/* Avisos de daño + decisión del cliente */}
       {hasIncident && (
         <p className="mt-1 text-[12px] font-bold text-iris">📸 Damage photo on file</p>
       )}
+      {o.incident_decision && (
+        <p className="mt-1 inline-block rounded-full bg-iris-tint px-2.5 py-1 text-[12px] font-bold text-iris-deep">
+          Customer chose: {o.incident_decision === 'approve' ? 'Wash it anyway' : 'Return it untouched'}
+        </p>
+      )}
 
-      {/* Mover de etapa */}
+      {/* Etapas */}
       <div className="mt-3 flex flex-wrap gap-2">
         {FULFILLMENT_STAGES.map((stage) => {
           const isCurrent = here === stage.key
@@ -613,32 +523,173 @@ function BoardCard({ o, busy, onStage, passcode }) {
         </a>
       )}
 
-      {/* Foto de "ropa lista" (tarjeta digital de gracias) */}
+      {/* ---- Pesar y cobrar ---- */}
       <div className="mt-3 border-t border-ink/10 pt-3">
-        {!photoOpen ? (
+        {paid ? (
+          <p className="text-[13px] font-bold text-green-700">
+            ✓ Paid {o.final_amount ? `· $${Number(o.final_amount).toFixed(2)}` : ''}
+            {charged && (charged.extra > 0 || charged.couponDiscount > 0) && (
+              <span className="font-normal text-[12px] text-stone2">
+                {' '}(W&amp;F ${Number(charged.washFold).toFixed(2)}
+                {charged.extra > 0 ? ` + extra $${Number(charged.extra).toFixed(2)}` : ''}
+                {charged.couponDiscount > 0 ? ` - coupon $${Number(charged.couponDiscount).toFixed(2)}` : ''})
+              </span>
+            )}
+          </p>
+        ) : !hasCard ? (
+          <p className="text-[13px] font-bold text-[#8C3A2B]">No card on file — can’t charge this one.</p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-[12px] font-bold uppercase tracking-wide text-stone2">Weigh &amp; charge</p>
+            <div>
+              <label className="label" htmlFor={`w-${o.id}`}>
+                Final pounds (Wash &amp; Fold)
+              </label>
+              <input
+                id={`w-${o.id}`}
+                type="number"
+                min="0"
+                step="0.1"
+                inputMode="decimal"
+                className="field"
+                placeholder="e.g. 12.5"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="label">Dry cleaning — tap to add</label>
+              <div className="mt-1 space-y-1.5 rounded-xl border border-ink/10 p-3">
+                {DRY_CLEAN.map((item) => {
+                  const q = dryQty[item.key] || 0
+                  return (
+                    <div key={item.key} className="flex items-center justify-between gap-2">
+                      <span className="text-[13px]">
+                        {item.label} <span className="text-stone2">${item.price.toFixed(2)}</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Remove one ${item.label}`}
+                          className="h-7 w-7 rounded-full border border-ink/15 font-bold leading-none disabled:opacity-30"
+                          disabled={q === 0}
+                          onClick={() => bumpDry(item.key, -1)}
+                        >
+                          –
+                        </button>
+                        <span className="w-5 text-center text-sm font-bold">{q}</span>
+                        <button
+                          type="button"
+                          aria-label={`Add one ${item.label}`}
+                          className="h-7 w-7 rounded-full border border-ink/15 font-bold leading-none"
+                          onClick={() => bumpDry(item.key, +1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {dryTotal > 0 && (
+                <input
+                  type="text"
+                  className="field mt-2"
+                  placeholder="Note (optional)"
+                  value={extraNote}
+                  onChange={(e) => setExtraNote(e.target.value)}
+                />
+              )}
+            </div>
+
+            {chargeErr && <p className="text-[12px] font-bold text-[#8C3A2B]">{chargeErr}</p>}
+
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[12px] text-stone2">
+                {validW
+                  ? `W&F $${wf.toFixed(2)}${dryTotal > 0 ? ` + extra $${dryTotal.toFixed(2)}` : ''}`
+                  : 'Enter weight to see total'}
+              </p>
+              <button
+                type="button"
+                className="btn-primary whitespace-nowrap"
+                onClick={doCharge}
+                disabled={charging || !validW}
+              >
+                {charging ? 'Charging…' : preview ? `Charge $${preview.toFixed(2)}` : 'Charge'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ---- Foto de daño ---- */}
+      <div className="mt-3 border-t border-ink/10 pt-3">
+        {!dmgOpen ? (
           <button
             type="button"
             className="text-[12px] font-bold text-iris"
-            onClick={() => setPhotoOpen(true)}
+            onClick={() => setDmgOpen(true)}
           >
-            📸 {sentMsg ? 'Send another ready photo' : 'Send “ready” photo'}
+            🔎 {hasIncident ? 'Add another damage photo' : 'Report damage / stain'}
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[12px] font-bold text-ink">Damage photo</p>
+            <input type="file" accept="image/*" capture="environment" onChange={pickDmg} className="block w-full text-[12px]" />
+            {dmgPhoto && (
+              <img src={dmgPhoto} alt="Garment preview" className="max-h-32 rounded-lg border border-ink/10" />
+            )}
+            <textarea
+              rows={2}
+              value={dmgNote}
+              onChange={(e) => setDmgNote(e.target.value)}
+              placeholder="Optional note (e.g. small red stain on the left cuff, looks pre-existing)"
+              className="w-full resize-none rounded-xl border border-ink/15 bg-white px-3 py-2 text-[13px] outline-none focus:border-iris"
+            />
+            {dmgErr && <p className="text-[12px] font-bold text-[#8C3A2B]">{dmgErr}</p>}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!dmgPhoto || dmgBusy}
+                onClick={attachDmg}
+                className="rounded-full bg-iris px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
+              >
+                {dmgBusy ? 'Sending…' : 'Attach & email customer'}
+              </button>
+              <button type="button" className="text-[12px] text-stone2" onClick={() => setDmgOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {dmgSent && (
+          <p className="mt-2 text-[12px] font-bold text-iris">
+            ✓ Photo sent to {dmgSent.name}{' '}
+            <span className="font-normal text-stone2">
+              {dmgSent.emailed ? '· email sent for review' : '· saved (email not sent)'}
+            </span>
+          </p>
+        )}
+      </div>
+
+      {/* ---- Foto de "ropa lista" ---- */}
+      <div className="mt-3 border-t border-ink/10 pt-3">
+        {!readyOpen ? (
+          <button
+            type="button"
+            className="text-[12px] font-bold text-iris"
+            onClick={() => setReadyOpen(true)}
+          >
+            📸 {readyMsg ? 'Send another ready photo' : 'Send “ready” photo'}
           </button>
         ) : (
           <div className="space-y-2">
             <p className="text-[12px] font-bold text-ink">Photo of the finished laundry</p>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={onPickPhoto}
-              className="block w-full text-[12px]"
-            />
+            <input type="file" accept="image/*" capture="environment" onChange={pickReady} className="block w-full text-[12px]" />
             {readyPhoto && (
-              <img
-                src={readyPhoto}
-                alt="Finished laundry preview"
-                className="max-h-32 rounded-lg border border-ink/10"
-              />
+              <img src={readyPhoto} alt="Finished laundry preview" className="max-h-32 rounded-lg border border-ink/10" />
             )}
             <textarea
               rows={2}
@@ -647,480 +698,29 @@ function BoardCard({ o, busy, onStage, passcode }) {
               placeholder="Optional note to the customer…"
               className="w-full resize-none rounded-xl border border-ink/15 bg-white px-3 py-2 text-[13px] outline-none focus:border-iris"
             />
+            {readyErr && <p className="text-[12px] font-bold text-[#8C3A2B]">{readyErr}</p>}
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled={!readyPhoto || sending}
+                disabled={!readyPhoto || readyBusy}
                 onClick={sendReady}
                 className="rounded-full bg-iris px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
               >
-                {sending ? 'Sending…' : 'Send to customer'}
+                {readyBusy ? 'Sending…' : 'Send to customer'}
               </button>
-              <button
-                type="button"
-                className="text-[12px] text-stone2"
-                onClick={() => {
-                  setPhotoOpen(false)
-                  setReadyPhoto(null)
-                  setPhotoErr('')
-                }}
-              >
+              <button type="button" className="text-[12px] text-stone2" onClick={() => setReadyOpen(false)}>
                 Cancel
               </button>
             </div>
           </div>
         )}
-        {photoErr && <p className="mt-1 text-[12px] text-[#8C3A2B]">{photoErr}</p>}
-        {sentMsg && !photoOpen && (
-          <p className="mt-1 text-[12px] font-bold text-green-700">{sentMsg}</p>
-        )}
+        {readyMsg && !readyOpen && <p className="mt-1 text-[12px] font-bold text-iris">{readyMsg}</p>}
       </div>
     </li>
   )
 }
 
-function RealOrdersPanel({ passcode }) {
-  const [orders, setOrders] = useState(null) // null = loading
-  const [error, setError] = useState('')
-  const [weights, setWeights] = useState({}) // { [orderId]: '12.5' }
-  const [extras, setExtras] = useState({}) // { [orderId]: '45.00' } — dry cleaning, etc.
-  const [extraNotes, setExtraNotes] = useState({}) // { [orderId]: '3 shirts dry clean' }
-  const [dryItems, setDryItems] = useState({}) // { [orderId]: { suit: 2, shirt: 1 } }
-
-  // Suma/resta una prenda de tintorería y recalcula el extra + la nota automáticamente.
-  const setDryQty = (orderId, key, delta) => {
-    const cur = { ...(dryItems[orderId] || {}) }
-    const next = Math.max(0, (cur[key] || 0) + delta)
-    if (next === 0) delete cur[key]
-    else cur[key] = next
-    let subtotal = 0
-    const parts = []
-    for (const item of DRY_CLEAN) {
-      const q = cur[item.key] || 0
-      if (q > 0) {
-        subtotal += q * item.price
-        parts.push(`${q} ${item.label}`)
-      }
-    }
-    setDryItems((m) => ({ ...m, [orderId]: cur }))
-    setExtras((m) => ({ ...m, [orderId]: subtotal > 0 ? subtotal.toFixed(2) : '' }))
-    setExtraNotes((m) => ({ ...m, [orderId]: parts.join(', ') }))
-  }
-  const [busyId, setBusyId] = useState(null)
-  const [done, setDone] = useState({}) // { [orderId]: { washFold, extra, total, paymentId } }
-
-  const load = async () => {
-    setError('')
-    setOrders(null)
-    try {
-      const res = await fetch('/api/list-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
-      setOrders(data.orders)
-    } catch (err) {
-      setError(
-        err.message === 'Failed to fetch'
-          ? 'Couldn’t reach the server. Publish the app (or run `netlify dev`) so /api works.'
-          : err.message
-      )
-      setOrders([])
-    }
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const charge = async (order) => {
-    const pounds = parseFloat(weights[order.id])
-    if (!Number.isFinite(pounds) || pounds <= 0) {
-      setError('Enter the real weight first.')
-      return
-    }
-    const x = parseFloat(extras[order.id])
-    const extraCharge = Number.isFinite(x) && x > 0 ? x : 0
-    const extraNote = (extraNotes[order.id] || '').trim()
-    setBusyId(order.id)
-    setError('')
-    try {
-      const res = await fetch('/api/square-charge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id, pounds, extraCharge, extraNote, passcode }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Charge failed.')
-      setDone((d) => ({
-        ...d,
-        [order.id]: {
-          washFold: data.washFold,
-          extra: data.extra,
-          couponDiscount: data.couponDiscount,
-          total: data.total,
-          paymentId: data.paymentId,
-        },
-      }))
-      setOrders((list) => (list || []).filter((o) => o.id !== order.id))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  return (
-    <section className="card">
-      <div className="flex items-baseline justify-between">
-        <p className="eyebrow">Live orders · weigh &amp; charge</p>
-        <button
-          type="button"
-          className="text-[12px] font-bold text-iris underline"
-          onClick={load}
-        >
-          Refresh
-        </button>
-      </div>
-      <p className="mt-2 text-sm text-ink/70">
-        Real orders from your database with a card saved on file. Enter the final
-        weight and any dry-cleaning extra, then charge the saved card in one go.
-        Wash &amp; Fold is $2.25 / lb, $35 minimum.
-      </p>
-
-      {error && (
-        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
-          {error}
-        </p>
-      )}
-
-      {orders === null && <p className="mt-4 text-sm text-stone2">Loading orders…</p>}
-
-      {orders && orders.length === 0 && (
-        <p className="mt-4 text-sm text-stone2">No orders waiting to be charged right now.</p>
-      )}
-
-      {orders && orders.length > 0 && (
-        <ul className="mt-4 space-y-4">
-          {orders.map((o) => {
-            const w = parseFloat(weights[o.id])
-            const valid = Number.isFinite(w) && w > 0
-            const wf = valid ? Math.max(w * 2.25, 35) : 0
-            const x = parseFloat(extras[o.id])
-            const extraVal = Number.isFinite(x) && x > 0 ? x : 0
-            const preview = valid ? wf + extraVal : null
-            const noCard = !o.square_card_id
-            return (
-              <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
-                  <p className="text-[12px] text-stone2">
-                    est. ~${Number(o.estimate || 0).toFixed(2)}
-                  </p>
-                </div>
-                <p className="mt-0.5 text-[12px] text-stone2">
-                  {o.email}
-                  {o.phone ? ` · ${o.phone}` : ''}
-                </p>
-
-                {noCard ? (
-                  <p className="mt-3 text-sm font-bold text-[#8C3A2B]">
-                    No card on file — can’t charge this one.
-                  </p>
-                ) : (
-                  <div className="mt-3 space-y-3">
-                    <div>
-                      <label className="label" htmlFor={`w-${o.id}`}>
-                        Final pounds (Wash &amp; Fold)
-                      </label>
-                      <input
-                        id={`w-${o.id}`}
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        inputMode="decimal"
-                        className="field"
-                        placeholder="e.g. 12.5"
-                        value={weights[o.id] || ''}
-                        onChange={(e) =>
-                          setWeights((m) => ({ ...m, [o.id]: e.target.value }))
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="label">Dry cleaning — tap to add</label>
-                      <div className="mt-1 space-y-1.5 rounded-xl border border-ink/10 p-3">
-                        {DRY_CLEAN.map((item) => {
-                          const q = (dryItems[o.id] || {})[item.key] || 0
-                          return (
-                            <div key={item.key} className="flex items-center justify-between gap-2">
-                              <span className="text-[13px]">
-                                {item.label}{' '}
-                                <span className="text-stone2">${item.price.toFixed(2)}</span>
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  aria-label={`Remove one ${item.label}`}
-                                  className="h-7 w-7 rounded-full border border-ink/15 font-bold leading-none disabled:opacity-30"
-                                  disabled={q === 0}
-                                  onClick={() => setDryQty(o.id, item.key, -1)}
-                                >
-                                  –
-                                </button>
-                                <span className="w-5 text-center text-sm font-bold">{q}</span>
-                                <button
-                                  type="button"
-                                  aria-label={`Add one ${item.label}`}
-                                  className="h-7 w-7 rounded-full border border-ink/15 font-bold leading-none"
-                                  onClick={() => setDryQty(o.id, item.key, +1)}
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <p className="mt-1 text-[12px] text-stone2">
-                        Adds to the single total below — one charge, itemized.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <div className="w-36">
-                        <label className="label" htmlFor={`x-${o.id}`}>
-                          Dry-clean $ (auto)
-                        </label>
-                        <input
-                          id={`x-${o.id}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          className="field"
-                          placeholder="0.00"
-                          value={extras[o.id] || ''}
-                          onChange={(e) =>
-                            setExtras((m) => ({ ...m, [o.id]: e.target.value }))
-                          }
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="label" htmlFor={`xn-${o.id}`}>
-                          Note (optional)
-                        </label>
-                        <input
-                          id={`xn-${o.id}`}
-                          type="text"
-                          className="field"
-                          placeholder="e.g. 3 shirts dry clean"
-                          value={extraNotes[o.id] || ''}
-                          onChange={(e) =>
-                            setExtraNotes((m) => ({ ...m, [o.id]: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[12px] text-stone2">
-                        {valid
-                          ? `W&F $${wf.toFixed(2)}${extraVal > 0 ? ` + extra $${extraVal.toFixed(2)}` : ''}`
-                          : 'Enter weight to see total'}
-                      </p>
-                      <button
-                        type="button"
-                        className="btn-primary whitespace-nowrap"
-                        onClick={() => charge(o)}
-                        disabled={busyId === o.id || !valid}
-                      >
-                        {busyId === o.id
-                          ? 'Charging…'
-                          : preview
-                            ? `Charge $${preview.toFixed(2)}`
-                            : 'Charge'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-
-      {Object.keys(done).length > 0 && (
-        <div className="mt-5 rounded-2xl bg-iris-tint/50 p-4">
-          <p className="eyebrow">Charged just now</p>
-          <ul className="mt-2 space-y-1 text-sm">
-            {Object.entries(done).map(([id, info]) => (
-              <li key={id} className="font-bold text-iris">
-                ✓ ${Number(info.total).toFixed(2)}
-                {(info.extra > 0 || info.couponDiscount > 0) && (
-                  <span className="font-normal text-[12px] text-stone2">
-                    {' '}
-                    (W&amp;F ${Number(info.washFold).toFixed(2)}
-                    {info.extra > 0 ? ` + extra $${Number(info.extra).toFixed(2)}` : ''}
-                    {info.couponDiscount > 0 ? ` - coupon $${Number(info.couponDiscount).toFixed(2)}` : ''})
-                  </span>
-                )}{' '}
-                <span className="font-normal text-[12px] text-stone2">{info.paymentId}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </section>
-  )
-}
-
-/* ---------------- Order status + client email updates (Feature A) ---------------- */
-const FULFILLMENT_STAGES = [
-  { key: 'collected', label: 'Collected' },
-  { key: 'washing', label: 'In the wash' },
-  { key: 'ready', label: 'Ready' },
-  { key: 'delivered', label: 'Delivered' },
-]
-
-function StatusPanel({ passcode }) {
-  const [orders, setOrders] = useState(null)
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState('') // `${orderId}:${stageKey}`
-  const [flash, setFlash] = useState({}) // orderId -> { label, emailed }
-
-  const load = async () => {
-    setError('')
-    setOrders(null)
-    try {
-      const res = await fetch('/api/list-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode, scope: 'recent' }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
-      setOrders(data.orders)
-    } catch (err) {
-      setError(
-        err.message === 'Failed to fetch'
-          ? 'Couldn’t reach the server. Publish the app so /api works.'
-          : err.message
-      )
-      setOrders([])
-    }
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const setStatus = async (order, stage) => {
-    setBusy(`${order.id}:${stage.key}`)
-    setError('')
-    try {
-      const res = await fetch('/api/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id, status: stage.key, passcode }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Update failed.')
-      setOrders((list) =>
-        (list || []).map((o) => (o.id === order.id ? { ...o, fulfillment_status: stage.key } : o))
-      )
-      setFlash((f) => ({ ...f, [order.id]: { label: data.label, emailed: data.emailed } }))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusy('')
-    }
-  }
-
-  return (
-    <section className="card">
-      <div className="flex items-baseline justify-between">
-        <p className="eyebrow">Order status · email the client</p>
-        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
-          Refresh
-        </button>
-      </div>
-      <p className="mt-2 text-sm text-ink/70">
-        Tap a stage to update the order and email the customer automatically.
-      </p>
-
-      {error && (
-        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
-          {error}
-        </p>
-      )}
-
-      {orders === null && <p className="mt-4 text-sm text-stone2">Loading orders…</p>}
-      {orders && orders.length === 0 && <p className="mt-4 text-sm text-stone2">No orders yet.</p>}
-
-      {orders && orders.length > 0 && (
-        <ul className="mt-4 space-y-4">
-          {orders.map((o) => {
-            const f = flash[o.id]
-            return (
-              <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-stone2">
-                    {o.status === 'paid' ? 'Paid' : 'Scheduled'}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-[12px] text-stone2">{o.email}</p>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {FULFILLMENT_STAGES.map((stage) => {
-                    const isCurrent = o.fulfillment_status === stage.key
-                    const isBusy = busy === `${o.id}:${stage.key}`
-                    return (
-                      <button
-                        key={stage.key}
-                        type="button"
-                        onClick={() => setStatus(o, stage)}
-                        disabled={!!busy}
-                        className={
-                          'rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors disabled:opacity-50 ' +
-                          (isCurrent
-                            ? 'bg-iris text-ivory'
-                            : 'border border-ink/15 text-ink hover:bg-ivory')
-                        }
-                      >
-                        {isBusy ? '…' : stage.label}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {f && (
-                  <p className="mt-2 text-[12px] font-bold text-iris">
-                    ✓ Marked “{f.label}”{' '}
-                    <span className="font-normal text-stone2">
-                      {f.emailed ? '· email sent' : '· status saved (email not sent)'}
-                    </span>
-                  </p>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-/* ---------------- Damage photos (Función B-1) ---------------- */
-
-// Shrinks a phone photo in the browser before upload: resizes the long edge to
-// ~1000px and re-encodes as JPEG, so the stored base64 stays small (~100–300 KB).
+/* ---------------- Helper: comprime una foto antes de subirla ---------------- */
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -1149,304 +749,4 @@ function compressImage(file) {
     }
     reader.readAsDataURL(file)
   })
-}
-
-function IncidentPanel({ passcode }) {
-  const [orders, setOrders] = useState(null)
-  const [error, setError] = useState('')
-  const [photos, setPhotos] = useState({}) // orderId -> compressed dataURL
-  const [notes, setNotes] = useState({}) // orderId -> note text
-  const [busy, setBusy] = useState('') // orderId currently sending
-  const [flash, setFlash] = useState({}) // orderId -> name (just attached)
-
-  const load = async () => {
-    setError('')
-    setOrders(null)
-    try {
-      const res = await fetch('/api/list-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode, scope: 'recent' }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
-      setOrders(data.orders)
-    } catch (err) {
-      setError(
-        err.message === 'Failed to fetch'
-          ? 'Couldn’t reach the server. Publish the app so /api works.'
-          : err.message
-      )
-      setOrders([])
-    }
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const pickPhoto = async (orderId, file) => {
-    if (!file) return
-    setError('')
-    try {
-      const dataUrl = await compressImage(file)
-      setPhotos((p) => ({ ...p, [orderId]: dataUrl }))
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  const attach = async (order) => {
-    const photo = photos[order.id]
-    if (!photo) return setError('Pick a photo first.')
-    setBusy(order.id)
-    setError('')
-    try {
-      const res = await fetch('/api/report-incident', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: order.id,
-          passcode,
-          photo,
-          note: notes[order.id] || '',
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Upload failed.')
-      setFlash((f) => ({ ...f, [order.id]: { name: data.name || 'customer', emailed: data.emailed } }))
-      setOrders((list) =>
-        (list || []).map((o) =>
-          o.id === order.id ? { ...o, incident_created_at: new Date().toISOString() } : o
-        )
-      )
-      // clear the picker for this order
-      setPhotos((p) => ({ ...p, [order.id]: null }))
-      setNotes((n) => ({ ...n, [order.id]: '' }))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusy('')
-    }
-  }
-
-  return (
-    <section className="card">
-      <div className="flex items-baseline justify-between">
-        <p className="eyebrow">Damage photos · attach to an order</p>
-        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
-          Refresh
-        </button>
-      </div>
-      <p className="mt-2 text-sm text-ink/70">
-        Found a stain, tear, or pre-existing damage? Snap a photo and add a note.
-        We email the customer the photo with two choices: wash it anyway, or
-        return it untouched — and their answer comes back to you.
-      </p>
-
-      {error && (
-        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
-          {error}
-        </p>
-      )}
-
-      {orders === null && <p className="mt-4 text-sm text-stone2">Loading orders…</p>}
-      {orders && orders.length === 0 && <p className="mt-4 text-sm text-stone2">No orders yet.</p>}
-
-      {orders && orders.length > 0 && (
-        <ul className="mt-4 space-y-4">
-          {orders.map((o) => {
-            const picked = photos[o.id]
-            const justSaved = flash[o.id]
-            const hasIncident = !!o.incident_created_at
-            const isBusy = busy === o.id
-            return (
-              <li key={o.id} className="rounded-2xl border border-ink/10 p-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
-                  {hasIncident && !justSaved && (
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-iris">
-                      Photo on file
-                    </span>
-                  )}
-                </div>
-                <p className="mt-0.5 text-[12px] text-stone2">{o.email}</p>
-
-                {o.incident_decision && (
-                  <p className="mt-1 inline-block rounded-full bg-iris-tint px-2.5 py-1 text-[12px] font-bold text-iris-deep">
-                    Customer chose:{' '}
-                    {o.incident_decision === 'approve' ? 'Wash it anyway' : 'Return it untouched'}
-                  </p>
-                )}
-
-                <div className="mt-3 flex flex-col gap-3">
-                  <label className="btn-ghost cursor-pointer text-center">
-                    {picked ? 'Choose a different photo' : 'Choose / take a photo'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => pickPhoto(o.id, e.target.files && e.target.files[0])}
-                    />
-                  </label>
-
-                  {picked && (
-                    <img
-                      src={picked}
-                      alt="Selected garment"
-                      className="max-h-48 w-auto rounded-xl border border-ink/10 object-contain"
-                    />
-                  )}
-
-                  <textarea
-                    className="field min-h-[64px]"
-                    placeholder="Optional note (e.g. small red stain on the left cuff, looks pre-existing)"
-                    value={notes[o.id] || ''}
-                    onChange={(e) => setNotes((n) => ({ ...n, [o.id]: e.target.value }))}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => attach(o)}
-                    disabled={!picked || isBusy}
-                    className="btn-primary w-full disabled:opacity-50"
-                  >
-                    {isBusy ? 'Saving…' : 'Attach photo to order'}
-                  </button>
-                </div>
-
-                {justSaved && (
-                  <p className="mt-2 text-[12px] font-bold text-iris">
-                    ✓ Photo sent to {justSaved.name}{' '}
-                    <span className="font-normal text-stone2">
-                      {justSaved.emailed ? '· email sent for review' : '· saved (email not sent)'}
-                    </span>
-                  </p>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-/* ---------------- Today's pickups & route (batching helper) ---------------- */
-
-function RoutePanel({ passcode }) {
-  const [orders, setOrders] = useState(null)
-  const [error, setError] = useState('')
-  const today = new Date().toISOString().slice(0, 10)
-
-  const load = async () => {
-    setError('')
-    setOrders(null)
-    try {
-      const res = await fetch('/api/list-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode, scope: 'recent' }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load orders.')
-      setOrders(data.orders)
-    } catch (err) {
-      setError(
-        err.message === 'Failed to fetch'
-          ? 'Couldn’t reach the server. Publish the app so /api works.'
-          : err.message
-      )
-      setOrders([])
-    }
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const withPickup = (orders || []).filter((o) => o.pickup_date)
-  const todays = withPickup.filter((o) => o.pickup_date === today)
-  const upcoming = withPickup.filter((o) => o.pickup_date !== today)
-
-  const textLink = (o) => {
-    const digits = String(o.phone || '').replace(/[^\d]/g, '')
-    const win = o.pickup_window || 'your window'
-    const msg = `Hi ${o.name || 'there'}, this is Haven & Hours. Your laundry pickup is today (${win}). We'll arrive around ~____. See you soon!`
-    return `sms:${digits}?body=${encodeURIComponent(msg)}`
-  }
-
-  const Card = ({ o, isToday }) => (
-    <li className="rounded-2xl border border-ink/10 p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="font-bold">{o.order_code ? o.order_code + ' · ' : ''}{o.name || 'Customer'}</p>
-        <span className="text-[12px] text-stone2">{o.pickup_window}</span>
-      </div>
-      {o.address && <p className="mt-1 text-[13px] text-ink/75">{o.address}</p>}
-      <p className="mt-0.5 text-[12px] text-stone2">
-        {o.pickup_date}
-        {o.phone ? ` · ${o.phone}` : ''}
-      </p>
-      {o.phone && isToday && (
-        <a href={textLink(o)} className="btn-ghost mt-3 inline-block text-center">
-          📲 Text arrival time
-        </a>
-      )}
-    </li>
-  )
-
-  return (
-    <section className="card">
-      <div className="flex items-baseline justify-between">
-        <p className="eyebrow">Today’s pickups &amp; route</p>
-        <button type="button" className="text-[12px] font-bold text-iris underline" onClick={load}>
-          Refresh
-        </button>
-      </div>
-      <p className="mt-2 text-sm text-ink/70">
-        Group these into one efficient loop. Tap “Text arrival time” to send each
-        customer a closer ETA from your phone.
-      </p>
-
-      {error && (
-        <p role="alert" className="mt-3 text-sm font-bold text-[#8C3A2B]">
-          {error}
-        </p>
-      )}
-
-      {orders === null && <p className="mt-4 text-sm text-stone2">Loading…</p>}
-      {orders && withPickup.length === 0 && (
-        <p className="mt-4 text-sm text-stone2">No scheduled pickups yet.</p>
-      )}
-
-      {todays.length > 0 && (
-        <>
-          <p className="mt-5 text-[12px] font-bold uppercase tracking-wide text-iris">
-            Today ({todays.length})
-          </p>
-          <ul className="mt-2 space-y-3">
-            {todays.map((o) => (
-              <Card key={o.id} o={o} isToday />
-            ))}
-          </ul>
-        </>
-      )}
-
-      {upcoming.length > 0 && (
-        <>
-          <p className="mt-5 text-[12px] font-bold uppercase tracking-wide text-stone2">
-            Upcoming
-          </p>
-          <ul className="mt-2 space-y-3">
-            {upcoming.map((o) => (
-              <Card key={o.id} o={o} isToday={false} />
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
-  )
 }
