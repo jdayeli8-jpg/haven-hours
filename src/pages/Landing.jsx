@@ -12,14 +12,14 @@ const STEPS = [
   },
   {
     title: 'Delivered fresh',
-    body: 'Washed, pressed and folded to boutique standard, back at your door the next day (we rest on Sundays).',
+    body: 'Washed, pressed and folded to boutique standard, back at your door the next day (we rest on Sundays). Orders with dry cleaning come back together once it’s ready — usually 2–5 business days.',
   },
 ]
 
 const FAQS = [
   {
     q: 'How is my laundry weighed and priced?',
-    a: 'Your valet weighs the bag at pickup and you see the final total before anything is charged. Wash & Fold is $2.25 per pound with a $35 order minimum — bedding and ironing are priced by the piece, so they never inflate your by-the-pound weight.',
+    a: 'Your valet weighs the bag at pickup, and your card on file is charged only after the final weigh-and-count — with a fully itemized receipt emailed to you so every line is clear. Wash & Fold is $2.25 per pound with a $35 order minimum — bedding and ironing are priced by the piece, so they never inflate your by-the-pound weight.',
   },
   {
     q: 'Is my laundry washed with other people’s?',
@@ -35,7 +35,7 @@ const FAQS = [
   },
   {
     q: 'How does the dry cleaning run work?',
-    a: 'Mark dry-clean garments at pickup. We deliver them to our trusted partner cleaner, collect them when ready, and return them with your order. Each piece is itemized and added to your one order total — a single charge, with everything broken out on your receipt.',
+    a: 'Mark dry-clean garments at pickup. We hand them to our trusted partner cleaner and return them with your order once everything is ready. Dry cleaning usually takes 2–5 business days, depending on the garment — delicate fabrics and formalwear need a little more time. Need something urgently? Just ask and we’ll see what’s possible. Each piece is itemized and added to your one order total — a single charge, broken out on your receipt.',
   },
   {
     q: 'Do I need to sort or count anything?',
@@ -69,6 +69,14 @@ const RATES = [
     note: 'Suits, shirts, dresses & comforters — itemized and added to your one order total',
   },
 ]
+
+// ──────────────────────────────────────────────────────────────────────────
+// TESTIMONIOS — reseñas REALES de clientes.
+// Mientras esté vacío [], la sección NO aparece en el sitio (nada falso).
+// Cuando tengas una reseña real, agrégala así (y la sección aparece sola):
+//   { quote: 'Lo que dijo el cliente, en sus palabras.', name: 'Maria R.', area: 'Canyon Crest' },
+// ──────────────────────────────────────────────────────────────────────────
+const TESTIMONIALS = []
 
 export default function Landing() {
   return (
@@ -115,6 +123,61 @@ export default function Landing() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* ---------------- Our story ---------------- */}
+      <section className="mx-auto max-w-5xl px-6 py-20">
+        <div className="grid items-center gap-10 sm:grid-cols-5">
+          {/* Foto de la fundadora.
+              Cuando tengas una foto, reemplaza TODO este bloque <div> por:
+              <img src="/founder.jpg" alt="Elizabeth Diaz, founder of Haven & Hours"
+                   className="sm:col-span-2 w-full rounded-2xl object-cover shadow-sm" />
+              (sube la imagen como public/founder.jpg) */}
+          <div className="sm:col-span-2">
+            <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl border border-iris/20 bg-iris-tint">
+              <div className="text-center">
+                <p className="font-display text-5xl text-iris-deep">ED</p>
+                <p className="mt-2 text-[11px] uppercase tracking-wider2 text-iris">Elizabeth Diaz</p>
+                <p className="mt-1 text-[11px] text-iris/70">Founder</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="sm:col-span-3">
+            <p className="eyebrow">Our story</p>
+            <h2 className="mt-3 font-display text-3xl sm:text-4xl">Why Haven &amp; Hours exists.</h2>
+
+            <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-ink/75">
+              <p>
+                For years, I lived the very need I now help solve. Between ten-hour workdays and
+                nearly three hours of driving each day, I would come home with nothing left to wash,
+                sort, and fold my family’s laundry. My husband worked those same long hours; my kids
+                helped where they could, but between homework and exhaustion, the laundry always
+                ended up in a pile. And doing it with a back condition that brings me real pain
+                turned an everyday chore into a heavy weight.
+              </p>
+              <p className="font-display text-lg italic text-iris-deep">
+                I know what it’s like to need — even just for a moment — someone there to help with
+                the hard things.
+              </p>
+              <p>
+                That’s why I created Haven &amp; Hours: to give families that breath back. We pick up
+                your laundry, care for it as if it were our own, and return it clean, pressed, and
+                neatly folded — ready to simply put away. As a mom of three and a wife, I know what a
+                well-tended detail is worth. That’s why I’ll almost always give a little more than I
+                promise.
+              </p>
+              <p>
+                I believe that moms — and all families — sometimes need someone who understands what
+                we need and gives us room to breathe. That’s my purpose. We’ll honor and protect the
+                trust you place in us, with the same care I’d give my own. And it fills my heart to
+                start with my own community.
+              </p>
+            </div>
+
+            <p className="mt-6 font-display text-lg text-iris">— Elizabeth Diaz, Founder</p>
+          </div>
         </div>
       </section>
 
@@ -188,9 +251,10 @@ export default function Landing() {
               <h3 className="font-display text-xl">Dry cleaning run</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink/70">
                 Have garments that need a professional cleaner? Mark them at pickup and we’ll
-                ferry them to our trusted partner cleaner and bring them back with your
-                order. Each piece is itemized and added to your one order total — a single
-                charge, with everything broken out on your receipt.
+                hand them to our trusted partner cleaner and bring them back with your order once
+                everything is ready — usually 2–5 business days, depending on the garment. Each
+                piece is itemized and added to your one order total — a single charge, with
+                everything broken out on your receipt.
               </p>
             </div>
           </div>
@@ -208,15 +272,16 @@ export default function Landing() {
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-ivory/85">
             We treat your clothes like our own — with care, attention, and respect. If something
-            isn’t right when your order returns, tell us within 48 hours and we’ll make it right:
-            re-clean it, or fairly resolve it. No stress, no runaround. That’s our word to you.
+            isn’t right when your order returns, just tell us within 48 hours and we’ll make it
+            right: we’ll re-clean it free, or add a credit toward your next order. No stress, no
+            runaround. That’s our word to you.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[13px] font-bold text-ivory/90">
             <span className="flex items-center gap-2">
               <span className="text-base">✓</span> Every order washed separately
             </span>
             <span className="flex items-center gap-2">
-              <span className="text-base">✓</span> Care, fairly guaranteed
+              <span className="text-base">✓</span> Re-clean or credit, guaranteed
             </span>
             <span className="flex items-center gap-2">
               <span className="text-base">✓</span> Real people, right here in Riverside
@@ -224,6 +289,28 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* ---------------- Testimonials (aparece solo cuando hay reseñas reales) ---------------- */}
+      {TESTIMONIALS.length > 0 && (
+        <section className="mx-auto max-w-5xl px-6 py-16">
+          <p className="eyebrow">Kind words</p>
+          <h2 className="mt-3 font-display text-3xl sm:text-4xl">From our Riverside families.</h2>
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {TESTIMONIALS.map((t, i) => (
+              <figure key={i} className="rounded-2xl border border-ink/10 bg-ivory p-6">
+                <div aria-hidden="true" className="text-iris">★★★★★</div>
+                <blockquote className="mt-3 text-[15px] leading-relaxed text-ink/80">
+                  “{t.quote}”
+                </blockquote>
+                <figcaption className="mt-4 text-[13px] font-bold text-ink">
+                  {t.name}
+                  {t.area && <span className="font-normal text-stone2"> · {t.area}</span>}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ---------------- Dry cleaning billing ---------------- */}
       <section className="border-t border-ink/10 bg-linen/50">
@@ -263,11 +350,11 @@ export default function Landing() {
             <li className="flex gap-5">
               <span className="font-display text-2xl leading-none text-iris">3</span>
               <div>
-                <h3 className="font-display text-xl">Charged only when it’s settled</h3>
+                <h3 className="font-display text-xl">Charged only when it’s counted</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-ink/70">
-                  Your card on file is charged securely only after your final itemized total is set
-                  — right before your freshly pressed garments return to your door. You approve the
-                  number before you ever pay it.
+                  Your card on file is charged securely only after we weigh and count everything —
+                  never before. The moment we do, a fully itemized receipt lands in your inbox: every
+                  pound, every piece, every price spelled out. No guesses, no surprises.
                 </p>
               </div>
             </li>
