@@ -62,9 +62,9 @@ const round2 = (n) => Math.round(n * 100) / 100
 const StoreContext = createContext(null)
 
 export const PROMO = {
-  code: 'HAVEN10',
-  amount: 10,
-  label: '$10 welcome coupon — first wash only',
+  code: 'HAVEN15',
+  amount: 15,
+  label: 'Grand Opening — $15 off your first wash (through Jul 31, 2026)',
 }
 
 // Approved service-area ZIP codes. Edit this list as coverage expands.

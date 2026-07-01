@@ -1,6 +1,6 @@
 // netlify/functions/send-welcome-email.js
 //
-// Envía el correo de bienvenida con el cupón $10 usando Resend.
+// Envía el correo de bienvenida con el cupón de Grand Opening ($15) usando Resend.
 //
 // La llave RESEND_API_KEY vive SOLO en Netlify (Project configuration >
 // Environment variables) — NUNCA en el código del navegador.
@@ -10,7 +10,7 @@
 //   1. Cambia FROM por tu dirección (ej. 'Haven & Hours <hola@tudominio.com>')
 //   2. A partir de ahí le llega a CUALQUIER cliente.
 
-const FALLBACK_CODE = 'HAVEN10'
+const FALLBACK_CODE = 'HAVEN15'
 const FROM = 'Haven & Hours <hello@havenandhours.com>'
 
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''))
@@ -54,7 +54,7 @@ export async function handler(event) {
       body: JSON.stringify({
         from: FROM,
         to: [email],
-        subject: 'Your $10 welcome coupon — Haven & Hours',
+        subject: 'Your $15 Grand Opening coupon — Haven & Hours',
         html: welcomeHtml(code),
       }),
     })
@@ -79,10 +79,10 @@ function welcomeHtml(code) {
     <div style="max-width:560px;margin:0 auto;padding:40px 24px;">
       <div style="background:#FBF9F4;border-radius:20px;padding:40px 36px;border:1px solid #E7E0D3;">
         <p style="margin:0 0 6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8B8276;">Welcome to Haven &amp; Hours</p>
-        <h1 style="margin:0 0 16px;font-size:30px;line-height:1.2;color:#23201C;">Your $10 welcome coupon is here.</h1>
+        <h1 style="margin:0 0 16px;font-size:30px;line-height:1.2;color:#23201C;">Your $15 Grand Opening coupon is here.</h1>
         <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#4A453E;">
           Thank you for choosing Haven &amp; Hours. Here is your coupon for
-          <strong>$10 off your first wash</strong> with us — our way of welcoming you.
+          <strong>$15 off your first wash</strong> with us — our Grand Opening gift to welcome you.
         </p>
         <div style="text-align:center;margin:28px 0;">
           <div style="display:inline-block;background:#5B4B8A;color:#FBF9F4;font-family:monospace;font-size:22px;letter-spacing:3px;padding:14px 28px;border-radius:12px;">
@@ -90,7 +90,7 @@ function welcomeHtml(code) {
           </div>
         </div>
         <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#6B655C;text-align:center;">
-          Use this code at checkout on your first Atelier Wash. First-time clients only.
+          Use this code at checkout on your first Atelier Wash. New clients only · one per household · valid through July 31, 2026.
         </p>
         <div style="text-align:center;margin-top:8px;">
           <a href="https://haven-hours.netlify.app/dashboard"

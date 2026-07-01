@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useStore, PROMO } from '../context/StoreContext.jsx'
 
 /**
- * Lead capture for the $10 first-order promo.
+ * Lead capture for the $15 first-order promo.
  * Two surfaces, one shared store:
  *   1. A dismissible sticky banner at the very top.
  *   2. An exit-intent modal (fires when the cursor leaves toward the tab bar
@@ -79,14 +79,15 @@ function PromoBanner({ onDismiss, onClaim }) {
         {done ? (
           <p className="text-[13px] font-bold">
             <span className="text-iris-tint">✓</span> Welcome coupon sent! Use code{' '}
-            <span className="rounded bg-iris px-1.5 py-0.5 font-mono">{issuedCode || PROMO.code}</span> for $10 off
+            <span className="rounded bg-iris px-1.5 py-0.5 font-mono">{issuedCode || PROMO.code}</span> for $15 off
             your first wash with us.
           </p>
         ) : (
           <>
             <p className="text-[13px] font-medium">
-              New clients: enter your email for a{' '}
-              <span className="font-bold">$10 welcome coupon</span> toward your first Atelier Wash.
+              <span className="font-bold text-iris-tint">Grand Opening</span> · New clients: enter your email for a{' '}
+              <span className="font-bold">$15 coupon</span> toward your first wash —{' '}
+              <span className="whitespace-nowrap">through July 31, 2026</span>.
             </p>
             <div className="flex items-center gap-2">
               <input
@@ -110,7 +111,7 @@ function PromoBanner({ onDismiss, onClaim }) {
                 disabled={claiming}
                 className="whitespace-nowrap rounded-full bg-iris px-4 py-1.5 text-[13px] font-bold text-ivory transition-colors hover:bg-iris-deep disabled:opacity-50"
               >
-                {claiming ? 'Claiming…' : 'Claim $10 Off'}
+                {claiming ? 'Claiming…' : 'Claim $15 Off'}
               </button>
             </div>
           </>
@@ -158,7 +159,7 @@ function PromoModal({ onClose, onClaim }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="$10 off offer"
+      aria-label="$15 off offer"
     >
       <div
         className="relative w-full max-w-md rounded-3xl bg-ivory p-8 shadow-2xl"
@@ -181,7 +182,7 @@ function PromoModal({ onClose, onClaim }) {
               <span className="rounded bg-iris-tint px-2 py-0.5 font-mono font-bold text-iris-deep">
                 {issuedCode || PROMO.code}
               </span>{' '}
-              — it takes $10 off your <span className="font-bold">first wash with us</span>. Just for
+              — it takes $15 off your <span className="font-bold">first wash with us</span>. Just for
               first-time clients.
             </p>
             <button type="button" onClick={onClose} className="btn-primary mt-7">
@@ -190,13 +191,14 @@ function PromoModal({ onClose, onClaim }) {
           </div>
         ) : (
           <>
-            <p className="eyebrow">First wash with us</p>
+            <p className="eyebrow">Grand Opening · first wash with us</p>
             <h2 className="mt-3 font-display text-3xl leading-tight">
-              Your <span className="italic text-iris">$10 welcome coupon</span> is waiting.
+              Your <span className="italic text-iris">$15 Grand Opening coupon</span> is waiting.
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-ink/70">
-              Enter your email and we’ll send a coupon for $10 off your first Atelier Wash —
-              a welcome just for new clients. We’ll add an occasional note, never spam.
+              Enter your email and we’ll send a coupon for $15 off your first wash — our Grand
+              Opening gift for new clients. One per household, available through July 31, 2026.
+              We’ll add an occasional note, never spam.
             </p>
             <div className="mt-6 space-y-3">
               <input
@@ -218,7 +220,7 @@ function PromoModal({ onClose, onClaim }) {
                 </p>
               )}
               <button type="button" onClick={claim} disabled={claiming} className="btn-primary w-full disabled:opacity-50">
-                {claiming ? 'Claiming…' : 'Claim $10 Off'}
+                {claiming ? 'Claiming…' : 'Claim $15 Off'}
               </button>
             </div>
             <button

@@ -140,8 +140,8 @@ function PickupForm() {
         <div className="flex items-center gap-3 rounded-xl border border-iris/30 bg-iris-tint/40 px-4 py-3">
           <span className="text-lg">🎉</span>
           <p className="text-[13px] font-bold text-iris-deep">
-            Your $10 welcome coupon{couponCode ? ` (${couponCode})` : ''} is applied — valid on your
-            first wash with us.
+            Your $15 Grand Opening coupon{couponCode ? ` (${couponCode})` : ''} is applied — valid on
+            your first wash with us.
           </p>
         </div>
       )}

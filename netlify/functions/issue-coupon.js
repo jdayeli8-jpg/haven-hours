@@ -13,7 +13,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'https://kjzvdbawpqioluirxkir.supabase.co'
-const AMOUNT = 10
+const AMOUNT = 15
 // Alfabeto sin caracteres confusos (sin 0/O, 1/I/L) para que sea fácil de leer/teclear.
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 

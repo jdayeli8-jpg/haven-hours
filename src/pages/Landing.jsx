@@ -89,9 +89,10 @@ export default function Landing() {
           <br />
           Your day, <span className="italic text-iris">restored.</span>
         </h1>
-        <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ink/70">
-          Haven &amp; Hours collects, washes, presses and returns your laundry
-          with the care of a small atelier — across Riverside, California.
+        <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink/70">
+          Give yourself the hours back. You have better things to do than laundry — so we
+          collect it, care for it like our own, and return it fresh, pressed, and neatly
+          folded, ready to simply put away. Proudly serving Riverside, California.
         </p>
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link to="/dashboard" className="btn-primary">
@@ -100,6 +101,13 @@ export default function Landing() {
           <a href="#rates" className="text-sm font-bold text-ink/70 underline underline-offset-4 hover:text-ink">
             See rates
           </a>
+        </div>
+        <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-iris/25 bg-iris-tint/50 px-4 py-2">
+          <span aria-hidden="true">🎉</span>
+          <p className="text-[13px] font-bold text-iris-deep">
+            Grand Opening: $15 off your first wash
+            <span className="font-normal text-iris"> · new clients, through July 31, 2026</span>
+          </p>
         </div>
       </section>
 
@@ -154,8 +162,8 @@ export default function Landing() {
                 nearly three hours of driving each day, I would come home with nothing left to wash,
                 sort, and fold my family’s laundry. My husband worked those same long hours; my kids
                 helped where they could, but between homework and exhaustion, the laundry always
-                ended up in a pile. And doing it with a back condition that brings me real pain
-                turned an everyday chore into a heavy weight.
+                ended up in a pile. I know what it’s like to finish the day completely drained and
+                still face a mountain of laundry waiting.
               </p>
               <p className="font-display text-lg italic text-iris-deep">
                 I know what it’s like to need — even just for a moment — someone there to help with
