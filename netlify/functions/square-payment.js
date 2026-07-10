@@ -25,7 +25,7 @@ const PRICING = {
   BEDDING_QUEEN_FULL: 26,
   BEDDING_TWIN: 18,
 }
-const MAX_DISCOUNT = 10 // tope de seguridad: nadie puede "reclamar" más de $10
+const MAX_DISCOUNT = 15 // tope de seguridad: nadie puede "reclamar" más de $15
 
 const round2 = (n) => Math.round(n * 100) / 100
 

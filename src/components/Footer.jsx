@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import PolicyModal from './PolicyModal.jsx'
 import { TermsModal, PrivacyModal } from './LegalDocs.jsx'
+import { LOCATION, PHONES } from '../lib/businessInfo.js'
 
 export default function Footer() {
   const [policyOpen, setPolicyOpen] = useState(false)
@@ -15,8 +16,16 @@ export default function Footer() {
         <p className="mt-2 text-sm italic text-stone2">
           Your home, a haven. Your day, restored.
         </p>
-        <p className="mt-5 text-[12px] text-stone2">
-          Riverside, California · Serving 92507, 92506 &amp; nearby
+        <p className="mt-5 text-[12px] font-bold text-ink/70">{LOCATION}</p>
+        <p className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] text-stone2">
+          {PHONES.map((p) => (
+            <span key={p.tel}>
+              {p.name}{' '}
+              <a href={`tel:${p.tel}`} className="font-bold text-iris underline underline-offset-2">
+                {p.display}
+              </a>
+            </span>
+          ))}
         </p>
 
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">

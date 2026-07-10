@@ -149,6 +149,7 @@ export default function Checkout({ estPounds = 14 }) {
           pickupWindow: order?.pickup?.window,
           address: order?.pickup?.address,
           notes: order?.pickup?.notes,
+          zip: order?.pickup?.zip,
           pounds: estPounds,
           ironingPieces: services.ironingPieces || 0,
           beddingKing: services.beddingKing || 0,
@@ -202,7 +203,7 @@ export default function Checkout({ estPounds = 14 }) {
     <section className="card mt-6">
       <div className="flex items-baseline justify-between">
         <p className="eyebrow">Secure checkout</p>
-        <span className="text-[11px] text-stone2">🔒 Powered by Square · Sandbox</span>
+        <span className="text-[11px] text-stone2">🔒 Powered by Square</span>
       </div>
 
       <div className="mt-3 flex items-baseline justify-between">
@@ -358,7 +359,7 @@ export default function Checkout({ estPounds = 14 }) {
         {paying ? 'Confirming…' : 'Confirm card & schedule'}
       </button>
       <p className="mt-3 text-center text-[11px] text-stone2">
-        🔒 Square Sandbox · test mode · no real charge · card data never touches our servers
+        🔒 Secure payment powered by Square. Your card is saved now and charged after we weigh your laundry.
       </p>
 
       <PolicyModal open={policyOpen} onClose={() => setPolicyOpen(false)} />

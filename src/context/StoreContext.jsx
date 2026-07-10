@@ -67,8 +67,8 @@ export const PROMO = {
   label: 'Grand Opening — $15 off your first wash (through Jul 31, 2026)',
 }
 
-// Approved service-area ZIP codes. Edit this list as coverage expands.
-export const SERVICE_ZIPS = ['92506', '92508', '92501', '92504', '92507']
+// Zona de servicio — SOLO Riverside, CA. Edita esta lista para ampliar cobertura.
+export const SERVICE_ZIPS = ['92501', '92503', '92504', '92505', '92506', '92507', '92508']
 
 // Referral program: give a neighbor $10, get $10 yourself.
 export const REFERRAL = {

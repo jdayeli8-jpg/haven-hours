@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { PRICING } from '../context/StoreContext.jsx'
+import { PRICING, SERVICE_ZIPS } from '../context/StoreContext.jsx'
+import HoursSection from '../components/HoursSection.jsx'
 
 const STEPS = [
   {
@@ -399,19 +400,23 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ---------------- Hours & contact ---------------- */}
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <HoursSection />
+      </section>
+
       {/* ---------------- Coverage ---------------- */}
       <section className="border-t border-ink/10 bg-linen/50">
         <div className="mx-auto max-w-5xl px-6 py-16">
           <p className="eyebrow">Where we collect</p>
           <h2 className="mt-3 font-display text-3xl sm:text-4xl">Riverside, door to door.</h2>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink/70">
-            We currently serve <strong className="font-bold text-ink">92507</strong> and{' '}
-            <strong className="font-bold text-ink">92506</strong>, including Canyon Crest,
-            Victoria, Mission Grove and the UCR area — with nearby Riverside
+            <strong className="font-bold text-ink">Currently serving Riverside, CA only.</strong>{' '}
+            We collect and deliver across these Riverside ZIP codes — with nearby
             neighborhoods joining soon.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
-            {['92507', '92506', 'Canyon Crest', 'Victoria', 'Mission Grove', 'UCR area'].map((z) => (
+            {SERVICE_ZIPS.map((z) => (
               <span
                 key={z}
                 className="rounded-full border border-ink/15 bg-ivory px-3.5 py-1.5 text-[13px] font-bold text-ink/70"

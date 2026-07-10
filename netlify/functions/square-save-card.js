@@ -26,9 +26,23 @@ const PRICING = {
   BEDDING_QUEEN_FULL: 26,
   BEDDING_TWIN: 18,
 }
-const MAX_DISCOUNT = 10
+const MAX_DISCOUNT = 15
 const round2 = (n) => Math.round(n * 100) / 100
 const isEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''))
+
+// Zona de servicio — SOLO Riverside, CA (debe COINCIDIR con SERVICE_ZIPS del front).
+const SERVICE_ZIPS = ['92501', '92503', '92504', '92505', '92506', '92507', '92508']
+
+// Ventanas válidas por día (deben COINCIDIR con src/pages/Dashboard.jsx).
+// Dom cerrado · Sáb solo mañana · L-V dos bloques.
+const WINDOW_SAT = 'Morning · 8 AM – 12 PM'
+const WINDOWS_WEEKDAY = ['Morning · 7 AM – 12 PM', 'Afternoon · 12 PM – 6 PM']
+
+function weekdayOf(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''))
+  if (!m) return null
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay()
+}
 
 function computeEstimate({ pounds, ironingPieces, beddingKing, beddingQueenFull, beddingTwin, discount }) {
   const subtotal =
@@ -78,6 +92,28 @@ export async function handler(event) {
   const beddingTwin = Number(body.beddingTwin ?? 0)
   if (!Number.isFinite(pounds) || pounds <= 0 || pounds > 500) {
     return json(400, { ok: false, error: 'Peso (pounds) inválido.' }, headers)
+  }
+
+  // Validar la ZONA en el servidor. Tomamos el ZIP enviado o lo sacamos de la dirección.
+  const zip =
+    (String(body.zip || '').match(/\b\d{5}\b/) || [])[0] ||
+    (String(body.address || '').match(/\b\d{5}\b/) || [])[0] ||
+    null
+  if (!zip || !SERVICE_ZIPS.includes(zip)) {
+    return json(400, { ok: false, error: 'Sorry, we’re not serving that ZIP code yet.' }, headers)
+  }
+
+  // Validar el HORARIO en el servidor (que nadie agende fuera de horario).
+  const wd = weekdayOf(body.pickupDate)
+  if (wd === null) {
+    return json(400, { ok: false, error: 'Fecha de recolección inválida.' }, headers)
+  }
+  const allowedWindows = wd === 0 ? [] : wd === 6 ? [WINDOW_SAT] : WINDOWS_WEEKDAY
+  if (allowedWindows.length === 0) {
+    return json(400, { ok: false, error: 'We’re closed on Sundays — please choose another day.' }, headers)
+  }
+  if (!allowedWindows.includes(String(body.pickupWindow || ''))) {
+    return json(400, { ok: false, error: 'That pickup time isn’t within our hours. Please choose another window.' }, headers)
   }
 
   // Cliente de base de datos (lo usamos para validar cupón Y para guardar la orden).
@@ -145,7 +181,7 @@ export async function handler(event) {
         phone: phone || null,
         order_code: orderCode,
         stage: 'new',
-        zip: body.zip || null,
+        zip,
         pickup_date: body.pickupDate || null,
         pickup_window: body.pickupWindow || null,
         address: body.address || null,

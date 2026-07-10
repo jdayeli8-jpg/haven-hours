@@ -36,7 +36,7 @@ export default function ZipGate({ onVerified }) {
       setWaitError(true)
       return
     }
-    captureLead(waitEmail, { source: 'zip_waitlist', zip: zip.trim() })
+    captureLead(waitEmail, { source: 'out_of_area', zip: zip.trim(), notes: 'out_of_zone_waitlist' })
     setWaitDone(true)
   }
 
@@ -72,8 +72,7 @@ export default function ZipGate({ onVerified }) {
               </p>
             )}
             <p className="mt-3 text-[12px] text-stone2">
-              We currently serve Riverside neighborhoods including 92506, 92507, 92504, 92508 &amp;
-              92501.
+              Currently serving Riverside, CA only — ZIP codes {SERVICE_ZIPS.join(', ')}.
             </p>
           </>
         )}
@@ -92,11 +91,8 @@ export default function ZipGate({ onVerified }) {
             ) : (
               <div className="rounded-2xl border border-ink/10 bg-linen/40 p-6">
                 <h3 className="font-display text-xl leading-snug">
-                  We haven’t reached your neighborhood just yet — but our Atelier is expanding fast.
+                  We’re not in your area yet! Leave your email and we’ll let you know when we arrive.
                 </h3>
-                <p className="mt-3 text-[13px] text-ink/70">
-                  Join our waitlist to be notified when we arrive.
-                </p>
                 <div className="mt-4 flex gap-2">
                   <input
                     type="email"

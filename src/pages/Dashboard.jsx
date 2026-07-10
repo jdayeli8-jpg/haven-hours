@@ -4,11 +4,26 @@ import ClotheslineTracker from '../components/ClotheslineTracker.jsx'
 import Checkout from '../components/Checkout.jsx'
 import ReferAFriend from '../components/ReferAFriend.jsx'
 import ZipGate from '../components/ZipGate.jsx'
+import HoursSection from '../components/HoursSection.jsx'
+import DatePicker from '../components/DatePicker.jsx'
 
-const WINDOWS = ['Morning · 8 AM – 12 PM', 'Afternoon · 2 PM – 6 PM']
+// Horarios de recolección (America/Los_Angeles):
+//   Lun–Vie 7 AM–6 PM · Sáb 8 AM–12 PM · Dom cerrado.
+const WINDOW_SAT = 'Morning · 8 AM – 12 PM'
+const WINDOWS_WEEKDAY = ['Morning · 7 AM – 12 PM', 'Afternoon · 12 PM – 6 PM']
 
-// Reglas de horario: domingo cerrado; sábado solo "Mañana".
-// getDay(): 0=domingo, 6=sábado. Parseamos Y-M-D local para evitar saltos de zona horaria.
+// "Hoy" según la zona horaria de California, no la del navegador del cliente.
+function laToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date()) // -> "YYYY-MM-DD"
+}
+
+// Día de la semana (0=Dom … 6=Sáb) de una fecha Y-M-D. Es dato de calendario,
+// así que no depende de la zona horaria.
 function weekdayOf(dateStr) {
   if (!dateStr) return null
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -24,8 +39,12 @@ function nextOpenDate(dateStr) {
   while (dt.getDay() === 0) dt.setDate(dt.getDate() + 1)
   return ymd(dt)
 }
+// Ventanas disponibles según el día: Dom cerrado, Sáb solo mañana, L-V dos bloques.
 function windowsForDate(dateStr) {
-  return weekdayOf(dateStr) === 6 ? [WINDOWS[0]] : WINDOWS // sábado: solo Mañana
+  const wd = weekdayOf(dateStr)
+  if (wd === 0) return [] // domingo: cerrado
+  if (wd === 6) return [WINDOW_SAT] // sábado: solo mañana
+  return WINDOWS_WEEKDAY // lunes a viernes
 }
 
 export default function Dashboard() {
@@ -44,12 +63,12 @@ export default function Dashboard() {
 /* ---------------- Pickup form ---------------- */
 function PickupForm() {
   const { placeOrder, promoUnlocked, couponCode } = useStore()
-  const now = new Date()
-  const today = ymd(now)
+  const today = laToday() // "hoy" en horario de California
   const [verifiedZip, setVerifiedZip] = useState(null)
+  const initialDate = nextOpenDate(today)
   const [form, setForm] = useState({
-    date: nextOpenDate(today),
-    window: WINDOWS[0],
+    date: initialDate,
+    window: windowsForDate(initialDate)[0],
     address: '',
     notes: '',
   })
@@ -71,22 +90,22 @@ function PickupForm() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  // Al cambiar la fecha: si es domingo avisa; si es sábado fuerza "Mañana".
-  const onDateChange = (e) => {
-    const date = e.target.value
-    const wd = weekdayOf(date)
-    setForm((f) => ({ ...f, date, window: wd === 6 ? WINDOWS[0] : f.window }))
-    setError(wd === 0 ? 'We’re closed on Sundays — please choose another day.' : '')
+  // Al elegir una fecha en el calendario (los domingos ya no son seleccionables).
+  const pickDate = (picked) => {
+    if (weekdayOf(picked) === 0) return // domingo: cerrado (guarda por seguridad)
+    const allowed = windowsForDate(picked)
+    setForm((f) => ({ ...f, date: picked, window: allowed.includes(f.window) ? f.window : allowed[0] }))
+    setError('')
   }
 
   const availableWindows = windowsForDate(form.date)
 
   const submit = () => {
     if (!form.date) return setError('Choose a pickup date.')
-    const wd = weekdayOf(form.date)
-    if (wd === 0) return setError('We’re closed on Sundays — please choose another day.')
-    // En sábado solo hay "Mañana"; corregimos por si acaso.
-    const window = wd === 6 ? WINDOWS[0] : form.window
+    const allowed = windowsForDate(form.date)
+    if (allowed.length === 0) return setError('We’re closed on Sundays — please choose another day.')
+    // Aseguramos que la ventana elegida sea válida para ese día.
+    const window = allowed.includes(form.window) ? form.window : allowed[0]
     if (!form.address.trim()) return setError('Add the address where we should collect.')
     const ironingPieces = services.ironing ? parseInt(services.ironingPieces, 10) || 0 : 0
     if (services.ironing && ironingPieces <= 0)
@@ -95,7 +114,7 @@ function PickupForm() {
       return setError('Please confirm you understand the chlorine bleach note, or turn it off.')
     setError('')
     placeOrder(
-      { ...form, window, address: form.address.trim(), notes: form.notes.trim() },
+      { ...form, window, address: form.address.trim(), notes: form.notes.trim(), zip: verifiedZip },
       {
         ironingPieces,
         beddingKing: services.beddingKing,
@@ -146,29 +165,22 @@ function PickupForm() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="date" className="label">
-            Pickup date
-          </label>
-          <input id="date" type="date" min={today} className="field" value={form.date} onChange={onDateChange} />
-          <p className="mt-1 text-[12px] text-stone2">
-            Closed Sundays · Saturdays mornings only.
-          </p>
-        </div>
-        <div>
-          <label htmlFor="window" className="label">
-            Time window
-          </label>
-          <select id="window" className="field" value={form.window} onChange={set('window')}>
-            {availableWindows.map((w) => (
-              <option key={w}>{w}</option>
-            ))}
-          </select>
-          <p className="mt-1 text-[12px] text-stone2">
-            We’ll text you a closer arrival time the morning of your pickup.
-          </p>
-        </div>
+      <div>
+        <p className="label">Pickup date</p>
+        <DatePicker value={form.date} min={today} onPick={pickDate} />
+      </div>
+      <div>
+        <label htmlFor="window" className="label">
+          Time window
+        </label>
+        <select id="window" className="field" value={form.window} onChange={set('window')}>
+          {availableWindows.map((w) => (
+            <option key={w}>{w}</option>
+          ))}
+        </select>
+        <p className="mt-1 text-[12px] text-stone2">
+          We’ll text you a closer arrival time the morning of your pickup.
+        </p>
       </div>
 
       <div>
@@ -394,6 +406,8 @@ function PickupForm() {
       <p className="text-center text-[12px] text-stone2">
         Wash &amp; Fold $2.25/lb · $35 minimum · final weight confirmed at pickup
       </p>
+
+      <HoursSection />
 
       <ReferAFriend />
     </div>
