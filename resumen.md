@@ -215,3 +215,21 @@ Puesta a punto para recibir clientes reales. Todo en palabras sencillas:
 ### Cupón $15 (esta sesión)
 - Se quitó un tope escondido de $10. El cupón de bienvenida ahora sí descuenta los $15
   completos que se prometen en todos lados.
+
+### Publicación y respaldo — 10 de julio de 2026
+- **Publicado en vivo** en https://havenandhours.com usando Netlify CLI, al sitio
+  existente `haven-hours` (no se creó ninguno nuevo). Deploy en estado "ready".
+- **Sincronizado con GitHub** (`jdayeli8-jpg/haven-hours`, rama `main`, commit `520b750`).
+  Ahora el sitio en vivo, GitHub y la computadora dicen lo mismo — un cambio futuro
+  ya no puede revertir este trabajo.
+- Al subir a GitHub se **conservaron los scripts de ayuda** `PROBAR-APP.bat` y
+  `PUBLICAR.bat`, y se quitaron 4 archivos viejos duplicados de la raíz (favicon,
+  index.css e íconos que ya estaban correctos en `public/` y `src/`).
+- **Variables de entorno en Netlify** confirmadas: `ADMIN_PASSCODE`, `ANTHROPIC_API_KEY`,
+  `RESEND_API_KEY`, `SQUARE_ACCESS_TOKEN`, `SUPABASE_SERVICE_KEY`. (`SQUARE_API_BASE` y
+  `SQUARE_LOCATION_ID` no se pusieron porque el código ya usa los de producción por defecto.)
+
+### Pendiente para la dueña (prueba con dinero real)
+- Hacer un cobro de prueba con tarjeta propia: agendar → pesar y cobrar en `/admin` →
+  confirmar que el dinero entra en Square, que llega el recibo por correo, y que el
+  cupón de bienvenida resta $15 completos.
