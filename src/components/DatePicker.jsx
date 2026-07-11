@@ -74,7 +74,7 @@ export default function DatePicker({ value, min, onPick }) {
         })}
       </div>
 
-      <p className="mt-2 text-[12px] text-stone2">Closed Sundays · Saturdays mornings only.</p>
+      <p className="mt-2 text-[12px] text-stone2">Book online anytime · Pickups: Mon–Fri 7 AM–6 PM · Sat 8 AM–12 PM</p>
     </div>
   )
 }

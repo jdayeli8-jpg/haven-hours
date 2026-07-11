@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useStore } from '../context/StoreContext.jsx'
 
 /**
  * "For Business" — B2B landing for recurring commercial accounts.
@@ -60,7 +59,6 @@ const REASONS = [
 ]
 
 export default function ForBusiness() {
-  const { captureLead } = useStore()
   const [form, setForm] = useState({
     company: '',
     name: '',
@@ -71,25 +69,40 @@ export default function ForBusiness() {
   })
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.company.trim()) return setError('Please add your business name.')
     if (!form.name.trim()) return setError('Please add your name.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       return setError('Please add a valid email address.')
     setError('')
-    const details =
-      `Empresa: ${form.company.trim()} | Tipo: ${form.type}` +
-      (form.notes.trim() ? ` | Notas: ${form.notes.trim()}` : '')
-    captureLead(form.email, {
-      source: 'business_inquiry',
-      name: form.name.trim(),
-      phone: form.phone.trim() || null,
-      notes: details,
-    })
-    setSent(true)
+    setSending(true)
+    try {
+      const res = await fetch('/api/business-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: form.company.trim(),
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          phone: form.phone.trim(),
+          type: form.type,
+          notes: form.notes.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      setSending(false)
+      if (!res.ok || !data.ok) {
+        return setError(data.error || 'Something went wrong. Please try again, or email hello@havenandhours.com.')
+      }
+      setSent(true)
+    } catch {
+      setSending(false)
+      setError('There was a network problem. Please try again, or email hello@havenandhours.com.')
+    }
   }
 
   return (
@@ -153,10 +166,9 @@ export default function ForBusiness() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-iris-tint">
               <span className="text-2xl text-iris-deep">✓</span>
             </div>
-            <h2 className="mt-4 font-display text-3xl">Thank you — we’ll be in touch.</h2>
+            <h2 className="mt-4 font-display text-3xl">Thank you!</h2>
             <p className="mt-2 text-[15px] text-ink/70">
-              We’ve received your details and will reach out within one business day to talk through
-              a custom quote for {form.company}.
+              We’ll contact you within 24 hours with your custom quote.
             </p>
           </div>
         ) : (
@@ -246,12 +258,14 @@ export default function ForBusiness() {
 
               {error && <p className="text-sm font-bold text-[#8C3A2B]">{error}</p>}
 
-              <button type="button" onClick={submit} className="btn-primary w-full">
-                Request a custom quote
+              <button
+                type="button"
+                onClick={submit}
+                disabled={sending}
+                className="btn-primary w-full disabled:opacity-50"
+              >
+                {sending ? 'Sending…' : 'Request a custom quote'}
               </button>
-              <p className="text-center text-[12px] text-stone2">
-                Demo mode · we’ll save your details and follow up when the database is connected.
-              </p>
             </div>
           </>
         )}
