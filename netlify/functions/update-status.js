@@ -104,6 +104,7 @@ function statusHtml(name, stage) {
   const hi = name ? `Hi ${escapeHtml(name)},` : 'Hi there,'
   return `
   <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:28px;color:#2B2A29;">
+    <img src="https://havenandhours.com/icons/icon-192.png" alt="Haven &amp; Hours" width="56" height="56" style="display:block;border:0;margin:0 0 14px" />
     <h1 style="font-size:24px;color:#5B4B8A;margin:0 0 6px;">Haven &amp; Hours</h1>
     <p style="font-size:15px;line-height:1.6;">${hi}</p>
     <p style="font-size:15px;line-height:1.6;">${escapeHtml(stage.line)}</p>

@@ -162,6 +162,7 @@ function notifyHtml({ company, name, email, phone, message }) {
     </tr>`
   return `<!doctype html><html><body style="margin:0;background:#F3EFE8;font-family:Helvetica,Arial,sans-serif">
     <div style="max-width:560px;margin:0 auto;padding:32px 24px;color:#2A2622">
+      <img src="https://havenandhours.com/icons/icon-192.png" alt="Haven &amp; Hours" width="52" height="52" style="display:block;border:0;margin:0 0 14px" />
       <p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#7a736b;font-weight:700;margin:0">Haven &amp; Hours · For business</p>
       <h1 style="font-size:22px;margin:8px 0 4px">New custom quote request</h1>
       <p style="font-size:14px;color:#7a736b;margin:0 0 18px">A salon just asked for a quote on the website.</p>

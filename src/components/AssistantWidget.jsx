@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import Logo from './Logo.jsx'
 
 // Recepcionista de AI (24/7) para los clientes. Burbujita flotante abajo a la derecha.
 // Habla con /api/assistant (función segura). El saludo es solo visual: NO se manda a la API.
@@ -58,9 +59,12 @@ export default function AssistantWidget() {
         <div className="mb-3 flex h-[30rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-ink/10 bg-ivory shadow-2xl">
           {/* Encabezado */}
           <div className="flex items-center justify-between bg-iris px-4 py-3 text-white">
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-white/70">Haven &amp; Hours</p>
-              <p className="text-sm font-bold">Ask us anything</p>
+            <div className="flex items-center gap-2.5">
+              <Logo className="h-9 w-9 rounded-full ring-1 ring-white/25" />
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-white/70">Haven &amp; Hours</p>
+                <p className="text-sm font-bold">Ask us anything</p>
+              </div>
             </div>
             <button
               type="button"

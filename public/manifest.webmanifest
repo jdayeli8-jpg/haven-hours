@@ -1,8 +1,11 @@
 {
-  "name": "Haven & Hours Laundry",
+  "name": "Haven & Hours",
   "short_name": "Haven & Hours",
   "description": "Premium laundry pickup & delivery in Riverside, CA. Your home, a haven. Your day, restored.",
   "id": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["lifestyle", "business"],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

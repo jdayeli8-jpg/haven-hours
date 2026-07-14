@@ -78,6 +78,7 @@ function welcomeHtml(code) {
   <div style="margin:0;padding:0;background:#F4F1EA;font-family:Georgia,'Times New Roman',serif;">
     <div style="max-width:560px;margin:0 auto;padding:40px 24px;">
       <div style="background:#FBF9F4;border-radius:20px;padding:40px 36px;border:1px solid #E7E0D3;">
+        <img src="https://havenandhours.com/icons/icon-192.png" alt="Haven &amp; Hours" width="60" height="60" style="display:block;border:0;margin:0 0 18px" />
         <p style="margin:0 0 6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8B8276;">Welcome to Haven &amp; Hours</p>
         <h1 style="margin:0 0 16px;font-size:30px;line-height:1.2;color:#23201C;">Your $15 Grand Opening coupon is here.</h1>
         <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#4A453E;">

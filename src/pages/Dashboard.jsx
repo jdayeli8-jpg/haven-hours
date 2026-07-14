@@ -6,6 +6,7 @@ import ReferAFriend from '../components/ReferAFriend.jsx'
 import ZipGate from '../components/ZipGate.jsx'
 import HoursSection from '../components/HoursSection.jsx'
 import DatePicker from '../components/DatePicker.jsx'
+import InstallApp from '../components/InstallApp.jsx'
 
 // Horarios de recolección (America/Los_Angeles):
 //   Lun–Vie 7 AM–6 PM · Sáb 8 AM–12 PM · Dom cerrado.
@@ -56,6 +57,7 @@ export default function Dashboard() {
         {!order ? 'Schedule a pickup' : order.authorization ? 'Your order' : 'Confirm your pickup'}
       </h1>
       {order ? <OrderView /> : <PickupForm />}
+      <InstallApp />
     </div>
   )
 }

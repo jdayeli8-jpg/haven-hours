@@ -91,6 +91,7 @@ export async function handler(event) {
     const photoUrl = `${SITE}/api/incident-photo?order=${order.id}&token=${token}`
     const html = `
       <div style="font-family:Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;color:#2A2622;line-height:1.55">
+        <img src="https://havenandhours.com/icons/icon-192.png" alt="Haven &amp; Hours" width="56" height="56" style="display:block;border:0;margin:0 0 16px" />
         <p>Hi ${esc(order.name) || 'there'},</p>
         <p>During our intake inspection, we noticed something on one of your garments
         that we wanted you to see before we continue. We'd rather pause and ask than guess.</p>

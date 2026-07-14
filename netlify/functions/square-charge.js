@@ -219,6 +219,7 @@ function receiptHtml(name, { pounds, washFold, extra, extraNote, couponDiscount,
 
   return `<!doctype html><html><body style="margin:0;background:#F4F1EC;font-family:Georgia,'Times New Roman',serif;">
     <div style="max-width:520px;margin:0 auto;padding:32px 24px;">
+      <img src="https://havenandhours.com/icons/icon-192.png" alt="Haven &amp; Hours" width="56" height="56" style="display:block;border:0;margin:0 0 14px" />
       <h1 style="font-size:24px;color:#463E59;margin:0 0 4px;">Haven &amp; Hours</h1>
       <p style="font-size:13px;color:#7a7580;margin:0 0 24px;letter-spacing:.04em;text-transform:uppercase;">Your receipt</p>
       <p style="font-size:16px;color:#2b2733;margin:0 0 8px;">${hi}</p>

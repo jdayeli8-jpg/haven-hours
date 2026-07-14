@@ -2,6 +2,7 @@ import { useState } from 'react'
 import PolicyModal from './PolicyModal.jsx'
 import { TermsModal, PrivacyModal } from './LegalDocs.jsx'
 import { LOCATION, PHONES } from '../lib/businessInfo.js'
+import Logo from './Logo.jsx'
 
 export default function Footer() {
   const [policyOpen, setPolicyOpen] = useState(false)
@@ -10,7 +11,8 @@ export default function Footer() {
   return (
     <footer className="border-t border-ink/10">
       <div className="mx-auto max-w-5xl px-5 py-10 text-center">
-        <p className="font-display text-xl">
+        <Logo className="mx-auto h-12 w-12" />
+        <p className="mt-3 font-display text-xl">
           Haven <span className="italic text-iris">&amp;</span> Hours
         </p>
         <p className="mt-2 text-sm italic text-stone2">
