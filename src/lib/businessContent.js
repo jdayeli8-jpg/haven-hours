@@ -31,6 +31,8 @@ export const OPTION_B_SETUP = [
   { max: 274, setup: 570 },
   { max: Infinity, setup: 675 },
 ]
+// Add-on de capas y batas en la calculadora: suma fija al semanal (+$40 / 4 semanas).
+export const ADDON_WEEKLY = 10
 
 /* ---------- Colores ---------- */
 export const COLORS = [
@@ -43,22 +45,56 @@ export const COLORS = [
 
 /* ---------- Textos de todas las secciones ---------- */
 export const BIZ = {
-  // 1. HERO
+  // 1. HERO (corto)
   hero: {
     title: 'Fresh towels. Frozen prices. Local owners.',
-    subtitle:
-      'Haven & Hours is a towel service for salons, barbershops & spas, owned and run by Elizabeth & Kimberly right here in Riverside. The owners answer the phone — in English o en español.',
+    line: 'Premium towel service, owned & run by Elizabeth & Kimberly in Riverside — the owners answer the phone, in English o en español.',
+    types: 'For salons, barbershops, spas, gyms, tattoo studios & any business that runs on towels.',
     ctaTrial: 'Get my free trial load',
     ctaPrice: 'See my price in 30 seconds',
     spanish: 'Se habla español 🇲🇽',
   },
 
-  // 2. THREE WAYS
+  // 2. HOW IT WORKS
+  how: {
+    heading: 'How it works',
+    steps: [
+      { icon: '🎁', text: 'Try us free — one trial load, no strings.' },
+      { icon: '🔒', text: 'Pick your plan — price frozen in writing.' },
+      { icon: '🚐', text: 'Never think about towels again — weekly pickup & delivery.' },
+    ],
+  },
+
+  // 3. CALCULATOR
+  calc: {
+    heading: 'Know your price in 30 seconds',
+    towelsPerDay: 'Towels per day',
+    daysOpen: 'Days open per week',
+    iWantTo: 'I want to:',
+    optA: 'Bring my own towels',
+    optB: 'Buy towels + weekly wash',
+    addon: 'Add capes & smocks (+$10/week)',
+    towelsLabel: 'Towels',
+    addonLabel: 'Capes & smocks',
+    towelsWeek: 'Towels per week',
+    weeklyCost: 'Weekly cost',
+    per4: 'Per 4 weeks',
+    setup: 'One-time towels (setup)',
+    or12: 'or 12 weekly payments',
+    under200: 'Under 200 towels? Price drops — just call us for a custom quote.',
+    lock: 'Lock this price for 6 months →',
+  },
+
+  // 4. THREE OPTIONS (compactas + add-on)
   ways: {
     heading: 'Three ways to work with us',
+    seeDetails: 'See details',
+    hideDetails: 'Hide details',
     a: {
-      badge: 'Most popular way to start',
+      badge: 'Most popular',
       title: 'We wash YOUR towels',
+      short: 'Keep your own towels — we pick up, wash separately, fold & deliver weekly.',
+      from: 'from ~$392 per 4 weeks',
       body: 'Keep your own towels. We pick up, wash separately, fold beautifully and deliver every week.',
       rows: [
         ['Up to 130 / week', 'from $0.75/towel (~$392 per 4 weeks)'],
@@ -70,6 +106,8 @@ export const BIZ = {
     b: {
       badge: 'Best long-term value',
       title: 'Buy our towels + weekly wash',
+      short: 'Premium bleach-proof towels that become YOURS, plus weekly wash.',
+      from: 'from ~$348 per 4 weeks + towels',
       body: 'Premium bleach-proof towels in black, white or your color. And unlike the big companies: after you pay for them, the towels are YOURS — not rented forever. Or split into 12 easy weekly payments.',
       rows: [
         ['200 towels', '$450 setup + $87/week wash (~$348 per 4 weeks)'],
@@ -80,49 +118,38 @@ export const BIZ = {
     },
     c: {
       title: 'Rent our towels',
+      short: "Don't want to own or bring anything? We supply, rotate, wash & deliver.",
+      from: 'same-day custom quote',
       body: "Don't want to own or bring anything? We supply, rotate, wash and deliver. Ask us for a same-day custom quote.",
+    },
+    addon: {
+      title: 'Capes & Smocks · add-on',
+      body: 'We wash your cutting capes too — separately, fabric-safe care (no high heat). +$10/week up to 20 pieces (~$40 per 4 weeks) · 20+: +$18/week. First 2 weeks free. Add-on for towel clients only.',
     },
     footnote:
       "Every price is approximate — your final quote is personalized to YOUR salon and it's always ONE flat price: pickup, wash, fold & delivery included. No fuel fees, no service fees, no surprises. Ever. Price frozen in writing for 6 months.",
   },
 
-  // 3. CALCULATOR
-  calc: {
-    heading: 'Know your price in 30 seconds',
-    towelsPerDay: 'Towels per day',
-    daysOpen: 'Days open per week',
-    iWantTo: 'I want to:',
-    optA: 'Bring my own towels',
-    optB: 'Buy towels + weekly wash',
-    towelsWeek: 'Towels per week',
-    weeklyCost: 'Weekly cost',
-    per4: 'Per 4 weeks',
-    setup: 'One-time towels (setup)',
-    or12: 'or 12 weekly payments',
-    under200: 'Under 200 towels? Price drops — just call us for a custom quote.',
-    lock: 'Lock this price for 6 months →',
-  },
-
-  // 4. COLORS
-  colors: {
-    heading: 'Your towels, your brand',
-    more: 'More colors on request',
-    tagline: 'Big companies give you two colors. We match YOUR brand.',
-  },
-
-  // 5. NEIGHBOR PROMISE
+  // 5. NEIGHBOR PROMISE (compacta: 1 línea + tooltip con el texto largo)
   promise: {
     heading: 'Our neighbor promise',
     items: [
-      { icon: '🚨', title: 'Towel 911', body: 'Ran out on a busy Saturday? Call us. We live 15 minutes away, not 3 states away. Emergency packs delivered same day for active clients.' },
-      { icon: '🧾', title: 'Free invoice audit', body: "Bring us your current provider's invoice. In 10 minutes we'll circle every hidden fee with a pen. No strings." },
-      { icon: '📋', title: 'Monthly sanitization letter', body: 'Every month you get a signed letter certifying your towels are professionally hot-washed and sanitized weekly — keep it next to your license for State Board inspections.' },
-      { icon: '🧺', title: 'Shelf-ready delivery', body: "We don't drop a bag at the door. We place your folded towels right on your shelf and take the dirty ones with us." },
-      { icon: '🗣️', title: 'Truly bilingual', body: "Contract, receipts, texts and support in English or Spanish. Whichever YOU prefer. No 'press 2', no call centers." },
+      { icon: '🚨', title: 'Towel 911', short: 'Ran out? Same-day emergency packs.', body: 'Ran out on a busy Saturday? Call us. We live 15 minutes away, not 3 states away. Emergency packs delivered same day for active clients.' },
+      { icon: '🧾', title: 'Free invoice audit', short: "We'll circle every hidden fee on your bill.", body: "Bring us your current provider's invoice. In 10 minutes we'll circle every hidden fee with a pen. No strings." },
+      { icon: '📋', title: 'Sanitization letter', short: 'Signed proof for State Board.', body: 'Every month you get a signed letter certifying your towels are professionally hot-washed and sanitized weekly — keep it next to your license for State Board inspections.' },
+      { icon: '🧺', title: 'Shelf-ready delivery', short: 'Folded onto your shelf; dirty ones taken away.', body: "We don't drop a bag at the door. We place your folded towels right on your shelf and take the dirty ones with us." },
+      { icon: '🗣️', title: 'Truly bilingual', short: 'English or Spanish — your choice.', body: "Contract, receipts, texts and support in English or Spanish. Whichever YOU prefer. No 'press 2', no call centers." },
     ],
   },
 
-  // 6. QUOTE VS BILL
+  // Títulos del acordeón (secciones plegadas al fondo)
+  accordion: {
+    compare: 'Why our bill never surprises you',
+    colors: 'Colors',
+    next: "What's coming next + vote",
+  },
+
+  // 6. QUOTE VS BILL (dentro del acordeón)
   compare: {
     heading: 'The quote is not the bill',
     sub: 'Illustrative example for a salon using 240 towels/week.',
@@ -152,12 +179,19 @@ export const BIZ = {
     foot: 'Illustrative example. Never sign ANY towel contract without asking: How long is the term? Does it auto-renew? Can the bill grow?',
   },
 
-  // 7. WHAT'S NEXT + VOTE
+  // 4b. COLORS (dentro del acordeón)
+  colors: {
+    heading: 'Your towels, your brand',
+    more: 'More colors on request',
+    tagline: 'Big companies give you two colors. We match YOUR brand.',
+  },
+
+  // 7. WHAT'S NEXT + VOTE (dentro del acordeón) — sin "capes & smocks" (ya es add-on)
   next: {
     heading: "What's next — you vote",
-    body: 'Coming soon: cutting capes & smocks wash, facial bed sheets, manicure towels, laser engraved logo towels, and more.',
+    body: 'Coming soon: facial bed sheets, manicure towels, laser engraved logo towels, and more.',
     voteTitle: "What service do you need that nobody offers you? Tell us and we'll build it.",
-    votePlaceholder: 'e.g. weekly cutting capes…',
+    votePlaceholder: 'e.g. weekly facial sheets…',
     voteEmail: 'Email (optional)',
     voteBtn: 'Send my vote',
     voteThanks: 'Got it! You just helped decide our next service 💛',
@@ -173,8 +207,8 @@ export const BIZ = {
       { title: 'Refer a neighbor', body: '$25 credit for you, $25 for them.' },
     ],
     formHeading: 'Get my free trial load',
-    formSub: "Tell us about your salon and we'll send a personalized, flat-price quote — frozen for 6 months.",
-    fSalon: 'Salon name',
+    formSub: "Tell us about your business and we'll send a personalized, flat-price quote — frozen for 6 months.",
+    fSalon: 'Business name',
     fName: 'Your name',
     fPhone: 'Phone',
     fEmail: 'Email',
