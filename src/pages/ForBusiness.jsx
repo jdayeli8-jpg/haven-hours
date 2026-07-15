@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import {
-  BIZ, BIZ_PHONES, BIZ_LOCATION,
-  OPTION_A_TIERS, OPTION_B_WASH_TIERS, OPTION_B_SETUP, COLORS, ADDON_WEEKLY,
+  BIZ_PHONES, BIZ_LOCATION,
+  OPTION_A_TIERS, OPTION_B_WASH_TIERS, OPTION_B_SETUP, COLOR_SWATCHES, ADDON_WEEKLY,
 } from '../lib/businessContent.js'
+import { useBiz, useBizLang, setBizLang } from '../lib/useBizLang.js'
 
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US')
 const tierValue = (tiers, tw, key) => {
@@ -26,6 +27,28 @@ function Honeypot({ value, onChange }) {
   )
 }
 
+// Botón EN | ES
+function LangToggle() {
+  const lang = useBizLang()
+  const btn = (l, label) => (
+    <button
+      type="button"
+      onClick={() => setBizLang(l)}
+      aria-pressed={lang === l}
+      className={'px-3 py-1 text-[12px] font-bold transition ' + (lang === l ? 'bg-iris text-white' : 'text-ink/60 hover:text-ink')}
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div className="inline-flex shrink-0 overflow-hidden rounded-full border border-ink/15 bg-ivory">
+      {btn('en', 'EN')}
+      <span className="w-px self-stretch bg-ink/15" aria-hidden="true" />
+      {btn('es', 'ES')}
+    </div>
+  )
+}
+
 export default function ForBusiness() {
   return (
     <div>
@@ -43,11 +66,14 @@ export default function ForBusiness() {
 
 /* 1. HERO (corto) */
 function Hero() {
-  const c = BIZ.hero
+  const c = useBiz().hero
   return (
     <section className="border-b border-ink/10 bg-linen/40">
       <div className="mx-auto max-w-5xl px-6 py-14 sm:py-16">
-        <p className="eyebrow text-iris">For business · towel service</p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="eyebrow text-iris">{c.eyebrow}</p>
+          <LangToggle />
+        </div>
         <h1 className="mt-3 max-w-3xl font-display text-4xl leading-tight sm:text-6xl">{c.title}</h1>
         <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-ink/70">{c.line}</p>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -71,7 +97,7 @@ function Hero() {
 
 /* 2. HOW IT WORKS */
 function HowItWorks() {
-  const c = BIZ.how
+  const c = useBiz().how
   return (
     <section className="border-b border-ink/10">
       <div className="mx-auto max-w-5xl px-6 py-10">
@@ -92,7 +118,7 @@ function HowItWorks() {
 
 /* 3. CALCULATOR (+ add-on capas) */
 function Calculator() {
-  const c = BIZ.calc
+  const c = useBiz().calc
   const [perDay, setPerDay] = useState(30)
   const [days, setDays] = useState(6)
   const [opt, setOpt] = useState('A')
@@ -113,7 +139,7 @@ function Calculator() {
   return (
     <section id="calc" className="scroll-mt-20 border-b border-ink/10 bg-ivory/60">
       <div className="mx-auto max-w-3xl px-6 py-14">
-        <p className="eyebrow text-iris">Instant estimate</p>
+        <p className="eyebrow text-iris">{c.eyebrow}</p>
         <h2 className="mt-2 font-display text-3xl sm:text-4xl">{c.heading}</h2>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
@@ -152,7 +178,7 @@ function Calculator() {
                 <p className="mt-4 rounded-xl bg-iris-tint/30 px-4 py-2.5 text-[13px] text-ink/80">
                   {c.towelsLabel} <span className="font-bold">{money(towelsWeekly)}</span> + {c.addonLabel}{' '}
                   <span className="font-bold">{money(addonWeekly)}</span> ={' '}
-                  <span className="font-bold text-iris-deep">{money(weekly)}</span> / week
+                  <span className="font-bold text-iris-deep">{money(weekly)}</span> {c.perWeek}
                 </p>
               )}
               <div className="mt-4 flex items-baseline justify-between border-t border-ink/10 pt-4">
@@ -174,9 +200,7 @@ function Calculator() {
         </div>
 
         <a href="#contact" className="btn-primary mt-6 inline-block">{c.lock}</a>
-        <p className="mt-3 text-[12px] text-stone2">
-          All prices approximate · one flat price — pickup, wash, fold &amp; delivery included · frozen 6 months.
-        </p>
+        <p className="mt-3 text-[12px] text-stone2">{c.footnote}</p>
       </div>
     </section>
   )
@@ -206,7 +230,7 @@ function OptBtn({ active, onClick, children }) {
 
 /* 4. THREE OPTIONS (compactas) + add-on */
 function Options() {
-  const c = BIZ.ways
+  const c = useBiz().ways
   return (
     <section className="mx-auto max-w-5xl px-6 py-14">
       <h2 className="font-display text-3xl sm:text-4xl">{c.heading}</h2>
@@ -225,7 +249,7 @@ function Options() {
 }
 function OptionCard({ w, highlight }) {
   const [open, setOpen] = useState(false)
-  const ways = BIZ.ways
+  const ways = useBiz().ways
   return (
     <div className={'card flex flex-col ' + (highlight ? 'border-iris/40 ring-1 ring-iris/20' : '')}>
       {w.badge && (
@@ -265,7 +289,7 @@ function OptionCard({ w, highlight }) {
 
 /* 5. NEIGHBOR PROMISE (compacta, tooltip con el texto largo) */
 function Promise() {
-  const c = BIZ.promise
+  const c = useBiz().promise
   return (
     <section className="border-y border-ink/10 bg-linen/50">
       <div className="mx-auto max-w-5xl px-6 py-12">
@@ -286,10 +310,10 @@ function Promise() {
 
 /* 6-7. MÁS DETALLES (acordeón, cerrado por defecto) */
 function MoreDetails() {
-  const a = BIZ.accordion
+  const a = useBiz().accordion
   return (
     <section className="mx-auto max-w-4xl px-6 py-12">
-      <p className="eyebrow text-iris">More details</p>
+      <p className="eyebrow text-iris">{a.eyebrow}</p>
       <div className="mt-4">
         <Accordion title={a.compare}>
           <Compare />
@@ -318,7 +342,7 @@ function Accordion({ title, children }) {
   )
 }
 function Compare() {
-  const c = BIZ.compare
+  const c = useBiz().compare
   return (
     <div>
       <p className="text-[15px] text-ink/70">{c.sub}</p>
@@ -354,13 +378,13 @@ function InvoiceCard({ inv, highlight }) {
   )
 }
 function Colors() {
-  const c = BIZ.colors
+  const c = useBiz().colors
   return (
     <div>
       <div className="flex flex-wrap gap-6">
-        {COLORS.map((col) => (
-          <div key={col.name} className="flex w-28 flex-col items-center text-center">
-            <span className="h-14 w-14 rounded-full border border-ink/15" style={{ backgroundColor: col.hex }} />
+        {c.swatches.map((col, i) => (
+          <div key={i} className="flex w-28 flex-col items-center text-center">
+            <span className="h-14 w-14 rounded-full border border-ink/15" style={{ backgroundColor: COLOR_SWATCHES[i] }} />
             <span className="mt-2 text-[13px] font-bold text-ink">{col.name}</span>
             {col.note && <span className="text-[11px] leading-tight text-stone2">{col.note}</span>}
           </div>
@@ -375,7 +399,9 @@ function Colors() {
   )
 }
 function WhatsNext() {
-  const c = BIZ.next
+  const biz = useBiz()
+  const c = biz.next
+  const errors = biz.errors
   const [vote, setVote] = useState('')
   const [email, setEmail] = useState('')
   const [hp, setHp] = useState('')
@@ -384,7 +410,7 @@ function WhatsNext() {
   const [error, setError] = useState('')
 
   const submit = async () => {
-    if (!vote.trim()) return setError('Please tell us what service you need.')
+    if (!vote.trim()) return setError(errors.vote)
     setError('')
     setSending(true)
     try {
@@ -394,11 +420,11 @@ function WhatsNext() {
       })
       const data = await res.json().catch(() => ({}))
       setSending(false)
-      if (!res.ok || !data.ok) return setError(data.error || 'Something went wrong. Please try again.')
+      if (!res.ok || !data.ok) return setError(data.error || errors.generic)
       setSent(true)
     } catch {
       setSending(false)
-      setError('Network problem. Please try again.')
+      setError(errors.network)
     }
   }
 
@@ -416,7 +442,7 @@ function WhatsNext() {
             <Honeypot value={hp} onChange={(e) => setHp(e.target.value)} />
             {error && <p className="mt-2 text-sm font-bold text-[#8C3A2B]">{error}</p>}
             <button type="button" onClick={submit} disabled={sending} className="btn-primary mt-3 w-full disabled:opacity-50">
-              {sending ? 'Sending…' : c.voteBtn}
+              {sending ? biz.close.sending : c.voteBtn}
             </button>
           </>
         )}
@@ -427,7 +453,7 @@ function WhatsNext() {
 
 /* 8. CLOSE + PROMOS + CONTACT */
 function Close() {
-  const c = BIZ.close
+  const c = useBiz().close
   return (
     <section id="contact" className="mx-auto max-w-5xl scroll-mt-20 px-6 py-14">
       <h2 className="font-display text-3xl sm:text-4xl">{c.promosHeading}</h2>
@@ -457,7 +483,9 @@ function Close() {
   )
 }
 function ContactForm() {
-  const c = BIZ.close
+  const biz = useBiz()
+  const c = biz.close
+  const errors = biz.errors
   const [form, setForm] = useState({ salon: '', name: '', phone: '', email: '', message: '', hp: '' })
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
@@ -465,9 +493,9 @@ function ContactForm() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const submit = async () => {
-    if (!form.salon.trim()) return setError('Please add your business name.')
-    if (!form.name.trim()) return setError('Please add your name.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError('Please add a valid email address.')
+    if (!form.salon.trim()) return setError(errors.salon)
+    if (!form.name.trim()) return setError(errors.name)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError(errors.email)
     setError('')
     setSending(true)
     try {
@@ -482,11 +510,11 @@ function ContactForm() {
       })
       const data = await res.json().catch(() => ({}))
       setSending(false)
-      if (!res.ok || !data.ok) return setError(data.error || 'Something went wrong. Please try again, or call us.')
+      if (!res.ok || !data.ok) return setError(data.error || errors.genericCall)
       setSent(true)
     } catch {
       setSending(false)
-      setError('Network problem. Please try again, or call us.')
+      setError(errors.networkCall)
     }
   }
 
@@ -494,7 +522,7 @@ function ContactForm() {
     return (
       <div className="card text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-iris-tint"><span className="text-2xl text-iris-deep">✓</span></div>
-        <h3 className="mt-4 font-display text-2xl">Thank you!</h3>
+        <h3 className="mt-4 font-display text-2xl">{c.thanksTitle}</h3>
         <p className="mt-2 text-[15px] text-ink/70">{c.thanks}</p>
       </div>
     )
@@ -502,7 +530,7 @@ function ContactForm() {
   return (
     <div className="card">
       <p className="eyebrow text-iris">{c.formHeading}</p>
-      <h3 className="mt-2 font-display text-2xl">Tell us about your business.</h3>
+      <h3 className="mt-2 font-display text-2xl">{c.contactTitle}</h3>
       <p className="mt-2 text-[14px] text-ink/70">{c.formSub}</p>
       <div className="mt-5 space-y-3">
         <div><label className="label">{c.fSalon}</label><input className="field" value={form.salon} onChange={set('salon')} /></div>
@@ -524,6 +552,7 @@ function ContactForm() {
 
 /* Botón fijo en móvil: salta a la calculadora; se oculta al llegar a ella. */
 function StickyCta() {
+  const label = useBiz().hero.ctaPrice
   const [hidden, setHidden] = useState(false)
   useEffect(() => {
     const el = document.getElementById('calc')
@@ -538,7 +567,7 @@ function StickyCta() {
       href="#calc"
       className="fixed inset-x-0 bottom-4 z-40 mx-auto w-fit whitespace-nowrap rounded-full bg-iris px-6 py-3 text-sm font-bold text-white shadow-xl sm:hidden"
     >
-      📲 {BIZ.hero.ctaPrice}
+      📲 {label}
     </a>
   )
 }
